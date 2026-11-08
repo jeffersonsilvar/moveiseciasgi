@@ -47,3 +47,14 @@ A identidade visual utiliza o símbolo extraído da arte oficial Móveis & Cia (
 - Guia de continuidade: `docs/HANDOFF_PROXIMA_CONVERSA.md`.
 
 Os arquivos da versão não contêm segredos privados. Não inclua `.env.local` no GitHub. O sistema continua em **homologação**, ainda não aprovado para dados reais.
+
+
+## Atualização v0.9.5 — fila de expedição
+
+- Inclui painel **Pedidos sem agendamento**, mesmo que ainda existam bloqueios de financeiro, fabricação, endereço, região ou capacidade.
+- A liberação de fabricação **não agenda automaticamente**. Somente a reserva de vaga gera uma entrega na agenda.
+- O backend compara cidade/bairro de forma padronizada, inclusive nomes com e sem acento.
+- A expedição autorizada pode reservar uma data respeitando a mesma validação de pagamento, produção e capacidade.
+- Confira `docs/EXPEDICAO_JORNADA.md` para testes e restrições.
+
+**Nota:** confirme `npm run build` e os fluxos de permissões antes de usar dados reais.
