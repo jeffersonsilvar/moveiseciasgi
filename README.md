@@ -1,16 +1,39 @@
-# Móveis & Cia SGI
+# Móveis & Cia SGI — Commerce OS
 
-Sistema de Gestão Integrada para clientes, vendas, contas a receber e expedição das empresas do grupo Móveis & Cia.
+Sistema integrado de vendas, financeiro, fabricação e logística. Primeira versão real conectada ao Supabase, com design repensado a partir do conceito aprovado.
 
-## Stack
-React + TypeScript + Vite + Supabase (Auth/PostgreSQL/RLS).
+**Não confunda ambiente tecnicamente conectado com homologação de produção.** Leia `docs/STATUS.md` antes de usar dados reais.
 
-## Situação
-Fundação do banco aplicada no projeto Supabase `wpwnmdpgplvxnnkldtrg` com as tabelas de empresas, usuários, clientes, endereços, produtos, pedidos, pagamentos e contas a receber. As migrações foram registradas no histórico remoto do Supabase.
+## Instalação (Windows / VS Code)
 
-O frontend v0.6 está sendo testado localmente e precisa ser enviado ao GitHub após validação.
+```powershell
+npm install
+# Este pacote já inclui .env.local com SOMENTE a chave publicável do projeto Supabase.
+# Se precisar recriar o arquivo, copie .env.example e preencha a chave PUBLICÁVEL.
+npm run build
+npm run dev
+```
 
-## Segurança
-Nunca comitar `.env.local`, tokens secretos, `service_role`, senhas ou dados reais de clientes. Login autenticado não implica acesso: permissões dependem de `user_memberships` e RLS.
+O servidor exibirá `http://localhost:5173`. A conta administrativa Master já deve estar cadastrada pelo Supabase Auth.
 
-**Atenção**: enquanto este repositório for público, não incluir dados sensíveis da empresa.
+Repositório de destino: `jeffersonsilvar/moveiseciasgi`. **O frontend deste ZIP ainda não foi enviado ao GitHub.**
+Supabase: `wpwnmdpgplvxnnkldtrg`.
+
+### Regras implementadas
+- Pedido é uma página completa, cadastro/edição de cliente é modal.
+- Vendas por vendedor: produtos líquidos = bruto - desconto, frete/montagem fora.
+- Vários pagamentos no mesmo pedido e saldo com vencimento.
+- Rascunhos editáveis, exclusão auditada (cancelamento lógico).
+- Financeiro e fabricação bloqueiam agendamento e carga.
+- Agenda por CEP/endereço, bairro/cidade e vagas transacionais (sem simulação de disponibilidade).
+- Multiempresa e perfis verificados no banco de dados.
+
+### Migrações
+As migrações `sgi_01` a `sgi_14` foram aplicadas ao banco Supabase remoto nesta conversa. As migrações complementares ficam registradas no histórico do Supabase. Antes de outros ambientes, extraia e versione o baseline via Supabase CLI.
+
+### Importante
+Não utilizar segredos de servidor nem usar `service_role` no navegador. As chaves no frontend devem ser **publicáveis**. O `.env.local` é ignorado pelo Git.
+
+## Ajuste v0.9.2 — Menu lateral
+
+A identidade visual utiliza o símbolo extraído da arte oficial Móveis & Cia (em `public/brand-symbol.png`), com cabeçalho e menus responsivos que não deixam textos ultrapassarem a sidebar. O conteúdo funcional segue a v0.9.1.

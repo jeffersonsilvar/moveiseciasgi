@@ -1,0 +1,14 @@
+import type { SupabaseClient,User } from '@supabase/supabase-js';
+export type Membership={id:string;tenant_id:string;company_id:string|null;branch_id:string|null;role:string;active:boolean};
+export type Company={id:string;tenant_id:string;trade_name:string;legal_name:string;cnpj:string|null;active:boolean};
+export type Branch={id:string;company_id:string;name:string;active:boolean};
+export type AppContext={db:SupabaseClient;user:User;memberships:Membership[];companies:Company[];branches:Branch[];companyId:string;branchId:string;tenantId:string;isAdmin:boolean;canManage:boolean;canWrite:boolean;canFinance:boolean;canShipping:boolean;canProduction:boolean;notify:(m:string,type?:'success'|'error')=>void;go:(page:Page,orderId?:string)=>void;refresh:()=>void};
+export type Page='dashboard'|'customers'|'catalog'|'orders'|'new-order'|'order-detail'|'finance'|'production'|'logistics'|'manifests'|'settings'|'seller-report';
+export type Client={id:string;company_id:string;created_branch_id:string;name:string;document:string;mobile:string;phone:string|null;email:string|null;kind:string;active:boolean;customer_addresses?:Address[]};
+export type Address={id:string;company_id:string;customer_id:string;label:string;cep:string|null;street:string|null;number:string|null;neighborhood:string|null;city:string|null;state:string|null;complement:string|null;reference_point:string|null;is_primary:boolean;active:boolean};
+export type Product={id:string;company_id:string;sku:string;name:string;color:string|null;unit_price:number;availability_kind:string;active:boolean};
+export type OrderItem={id:string;name:string;sku:string|null;color:string|null;quantity:number;unit_price:number;availability_status:string;production_eta:string|null};
+export type OrderPay={id:string;method:string;amount:number;installments:number;status:string;received_at:string};
+export type Order={id:string;tenant_id:string;order_number:number;company_id:string;branch_id:string;customer_id:string;seller_user_id:string;commercial_status:string;financial_status:string;fulfillment_type:string;availability_status:string;products_gross:number;products_discount:number;freight:number;assembly:number;grand_total:number;received_total:number;due_date:string|null;created_at:string;updated_at:string;notes:string|null;customer_snapshot:{name?:string;document?:string;mobile?:string;email?:string};delivery_address_snapshot:Record<string,string>;financial_override_at:string|null;financial_override_reason:string|null;deleted_at:string|null;order_items?:OrderItem[];order_payments?:OrderPay[];delivery_bookings?:Booking[]};
+export type Receivable={id:string;company_id:string;order_id:string;amount_due:number;due_date:string;status:string};
+export type Booking={id:string;order_id:string;company_id:string;branch_id:string;slot_id:string;service_type:string;delivery_date:string;status:string;booked_at:string;delivery_notes:string|null};
