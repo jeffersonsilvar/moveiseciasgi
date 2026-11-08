@@ -35,3 +35,11 @@
 .dispatch-help{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;margin-top:18px;background:#fffbef;border:1px solid #f2deb1;border-radius:12px}
 .dispatch-help strong{display:block;font-size:13px;color:#755119}.dispatch-help p{margin:5px 0 0;font-size:11px;color:#8b7a55;line-height:1.6}
 @media (max-width:760px){.dispatch-help{flex-direction:column;align-items:stretch}.dispatch-help .btn{justify-content:center}}
+
+/* SGI v0.9.6 — flexible delivery zone management */
+.zone-area-list{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.zone-area-chip{display:flex;align-items:center;gap:7px;max-width:100%;border:1px solid #dbe4de;border-radius:10px;background:#f5f8f6;padding:7px 8px;color:#314c40;font-size:.85rem}
+.zone-area-chip span{overflow-wrap:anywhere}
+.zone-area-chip button{background:transparent;border:0;color:#7e5148;cursor:pointer;padding:3px;border-radius:5px;display:flex;align-items:center}
+.zone-area-chip button:focus-visible{outline:2px solid #c99400;outline-offset:1px}
+.zone-area-chip button:disabled{opacity:.4;cursor:not-allowed}
