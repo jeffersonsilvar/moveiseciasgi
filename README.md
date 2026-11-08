@@ -37,3 +37,13 @@ Não utilizar segredos de servidor nem usar `service_role` no navegador. As chav
 ## Ajuste v0.9.2 — Menu lateral
 
 A identidade visual utiliza o símbolo extraído da arte oficial Móveis & Cia (em `public/brand-symbol.png`), com cabeçalho e menus responsivos que não deixam textos ultrapassarem a sidebar. O conteúdo funcional segue a v0.9.1.
+
+## Atualização v0.9.3 — 08/11/2026
+
+- Melhoria na inicialização das permissões para evitar a tela de espera repetida ao retornar à aba.
+- Correção do fluxo de edição e confirmação de rascunhos (`private.sgi_update_draft`, já corrigido no Supabase).
+- Novo layout de impressão comercial A4 (botão **Imprimir pedido** na jornada).
+- Máscaras de CPF, CNPJ, telefone e CEP; normalização visual de nomes e endereços.
+- Guia de continuidade: `docs/HANDOFF_PROXIMA_CONVERSA.md`.
+
+Os arquivos da versão não contêm segredos privados. Não inclua `.env.local` no GitHub. O sistema continua em **homologação**, ainda não aprovado para dados reais.

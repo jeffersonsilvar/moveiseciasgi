@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install
+      - name: Instalar dependências (usar npm ci após versionar package-lock.json)
         run: |
           if [ -f package-lock.json ]; then
             npm ci

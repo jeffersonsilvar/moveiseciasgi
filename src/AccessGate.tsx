@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {createClient, type SupabaseClient, type User} from '@supabase/supabase-js';
 import Workspace from './Workspace';
 import './secure.css';
@@ -35,11 +35,25 @@ export default function AccessGate(){
  const [companies,setCompanies]=useState<Company[]>([]);
  const [branches,setBranches]=useState<Branch[]>([]);
  const [loaded,setLoaded]=useState(false);
+ const activeUserId=useRef<string|null>(null);
+ const [permissionRetry,setPermissionRetry]=useState(0);
+ const [permissionSlow,setPermissionSlow]=useState(false);
 
 
  useEffect(()=>{
   if(!db){setInitializing(false);return;}
   let active=true;
+  // O Supabase pode disparar SIGNED_IN novamente ao focar a aba.
+  // Só reiniciamos as permissões quando a identidade efetivamente muda.
+  const acceptUser=(next:User|null)=>{
+   const nextId=next?.id??null;
+   if(activeUserId.current!==nextId){
+    activeUserId.current=nextId;
+    setLoaded(false);setError('');setPermissionSlow(false);
+    setMemberships([]);setCompanies([]);setBranches([]);
+   }
+   setUser(next);
+  };
   const {data:{subscription}}=db.auth.onAuthStateChange((event,session)=>{
    if(!active)return;
    if(event==='PASSWORD_RECOVERY'){
@@ -49,35 +63,47 @@ export default function AccessGate(){
    if(event==='SIGNED_OUT'){
     setRecoverySession(false);setMode('login');
    }
-   setUser(session?.user??null);
-   if(event==='INITIAL_SESSION'||event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='PASSWORD_RECOVERY'){
-    setLoaded(false);
-   }
+   acceptUser(session?.user??null);
   });
-  db.auth.getUser().then(({data})=>{if(active){setUser(data.user??null);if(data.user&&new URLSearchParams(window.location.search).get('sgi_recovery')==='1'){setRecoverySession(true);setMode('change');setNotice('Sessão de recuperação validada. Defina uma nova senha.');}setInitializing(false);}})
-    .catch(()=>{if(active)setInitializing(false)});
+  void db.auth.getUser().then(({data,error:sessionError})=>{
+   if(!active)return;
+   if(!sessionError)acceptUser(data.user??null);
+   if(data.user&&new URLSearchParams(window.location.search).get('sgi_recovery')==='1'){
+    setRecoverySession(true);setMode('change');
+    setNotice('Sessão de recuperação validada. Defina uma nova senha.');
+   }
+  }).catch(()=>{}).finally(()=>{if(active)setInitializing(false)});
   return()=>{active=false;subscription.unsubscribe()};
  },[]);
 
  useEffect(()=>{
-  if(!db||!user||recoverySession){setLoaded(false);setMemberships([]);return;}
+  if(!db||!user||recoverySession)return;
   let active=true;
+  const slowTimer=window.setTimeout(()=>{if(active)setPermissionSlow(true)},8000);
   const load=async()=>{
-   const [m,c,b]=await Promise.all([
-    db!.from('user_memberships').select('id,tenant_id,company_id,branch_id,role,active').eq('active',true),
-    db!.from('companies').select('id,tenant_id,trade_name,legal_name,cnpj,active').eq('active',true),
-    db!.from('branches').select('id,company_id,name,active').eq('active',true)
-   ]);
-   if(active){
-    if(m.error||c.error||b.error)setError(m.error?.message||c.error?.message||b.error?.message||'Erro ao consultar permissões');
+   setError('');setPermissionSlow(false);
+   try{
+    const [m,c,b]=await Promise.all([
+     db!.from('user_memberships').select('id,tenant_id,company_id,branch_id,role,active').eq('active',true),
+     db!.from('companies').select('id,tenant_id,trade_name,legal_name,cnpj,active').eq('active',true),
+     db!.from('branches').select('id,company_id,name,active').eq('active',true)
+    ]);
+    if(!active)return;
+    if(m.error||c.error||b.error){
+     setError(m.error?.message||c.error?.message||b.error?.message||'Erro ao consultar permissões');
+     setLoaded(true);return;
+    }
     setMemberships((m.data??[]) as Membership[]);
     setCompanies((c.data??[]) as Company[]);
     setBranches((b.data??[]) as Branch[]);
     setLoaded(true);
-   }
+   }catch(e){
+    if(active){setError(e instanceof Error?e.message:'Não foi possível consultar as permissões.');setLoaded(true)}
+   }finally{window.clearTimeout(slowTimer)}
   };
-  void load();return()=>{active=false};
- },[user?.id,recoverySession]);
+  void load();
+  return()=>{active=false;window.clearTimeout(slowTimer)};
+ },[user?.id,recoverySession,permissionRetry]);
 
  async function signIn(e:React.FormEvent){
   e.preventDefault();if(!db)return;
@@ -142,8 +168,8 @@ export default function AccessGate(){
    <button className="sgi-auth-link" type="button" onClick={()=>{setMode('forgot');setError('');setNotice('');setPassword('')}}>Esqueci minha senha</button>}
   <small>Cadastro de usuários somente pela administração. Nunca compartilhe sua senha.</small>
  </form></div>;
- if(!loaded)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Carregando permissões...</h2></div></div>;
- if(error)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Não foi possível verificar as permissões</h2><p>{error}</p><button className="sgi-button" onClick={()=>window.location.reload()}>Tentar novamente</button><button className="sgi-auth-link" onClick={()=>void db.auth.signOut()}>Sair</button></div></div>;
+ if(!loaded)return <div className="sgi-auth-page"><div className="sgi-login" role="status" aria-live="polite"><h2>Preparando seu acesso...</h2><p>Estamos conferindo suas empresas e permissões.</p>{permissionSlow&&<><div className="sgi-auth-notice">A consulta está demorando mais que o esperado. Você pode tentar novamente sem perder o login.</div><button className="sgi-button" onClick={()=>setPermissionRetry(v=>v+1)}>Tentar novamente</button></>}</div></div>;
+ if(error)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Não foi possível verificar as permissões</h2><p>{error}</p><button className="sgi-button" onClick={()=>{setLoaded(false);setPermissionRetry(v=>v+1)}}>Tentar novamente</button><button className="sgi-auth-link" onClick={()=>void db.auth.signOut()}>Sair</button></div></div>;
  if(!memberships.length)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Conta aguardando autorização</h2><p>O login foi realizado, mas não existe vínculo ativo com uma empresa ou loja.</p><p><strong>{user.email}</strong></p><button className="sgi-button" onClick={()=>void db.auth.signOut()}>Sair</button></div></div>;
  return <Workspace db={db} user={user} memberships={memberships} companies={companies} branches={branches} onSignOut={()=>void db.auth.signOut()}/>;
 }
