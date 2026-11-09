@@ -155,19 +155,28 @@ export default function AccessGate(){
   <button className="sgi-button" type="submit" disabled={busy}>{busy?'Atualizando...':'Salvar nova senha'}</button>
   <small>Não compartilhe a senha de acesso.</small>
  </form></div>;
- if(!user)return <div className="sgi-auth-page"><form className="sgi-login" onSubmit={mode==='forgot'?requestReset:signIn}>
-  <img src="/brand.jpg" alt="Móveis & Cia Gold" className="sgi-login-logo"/>
-  <h1>{mode==='forgot'?'Recuperar acesso':'Móveis & Cia SGI'}</h1>
-  <p>{mode==='forgot'?'Enviaremos um link para redefinir sua senha.':'Sistema de Gestão Integrada · Acesso restrito'}</p>
-  <label>E-mail<input type="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seuemail@empresa.com.br"/></label>
-  {mode!=='forgot'&&<label>Senha<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>}
-  {error&&<div className="sgi-alert" role="alert">{error}</div>}
-  {notice&&<div className="sgi-auth-notice" role="status">{notice}</div>}
-  <button className="sgi-button" disabled={busy} type="submit">{busy?'Processando...':mode==='forgot'?'Enviar link de recuperação':'Entrar no sistema'}</button>
-  {mode==='forgot'?<button className="sgi-auth-link" type="button" onClick={()=>{setMode('login');setError('')}}>Voltar ao login</button>:
-   <button className="sgi-auth-link" type="button" onClick={()=>{setMode('forgot');setError('');setNotice('');setPassword('')}}>Esqueci minha senha</button>}
-  <small>Cadastro de usuários somente pela administração. Nunca compartilhe sua senha.</small>
- </form></div>;
+ if(!user)return <div className="sgi-auth-split">
+  <section className="sgi-auth-story" aria-label="Apresentação do Móveis & Cia Commerce OS">
+   <div className="sgi-auth-story-header"><img src="/brand-symbol.png" alt="Símbolo Móveis & Cia"/><strong>Móveis & Cia <span>/ SGI Commerce OS</span></strong></div>
+   <div className="sgi-auth-story-main"><div className="sgi-auth-kicker">TRABALHO DE OUTRO NÍVEL</div>
+    <h1>Mais tempo para vender. <em>Menos tempo para organizar.</em></h1>
+    <p>Pedidos, recebíveis, fabricação e entregas. Tudo no lugar certo, da primeira conversa ao último quilômetro.</p>
+    <div className="sgi-auth-capabilities"><span>Vendas inteligentes</span><span>Operação conectada</span><span>Logística integrada</span></div>
+   </div>
+   <div className="sgi-auth-story-foot">Móveis & Cia Gold · Tecnologia para uma operação mais simples</div>
+  </section>
+  <section className="sgi-auth-form-zone"><form className="sgi-login sgi-login-modern" onSubmit={mode==='forgot'?requestReset:signIn}>
+   <div className="sgi-login-brand"><img src="/brand-symbol.png" alt="Símbolo Móveis & Cia Gold"/><div><strong>Móveis & Cia SGI</strong><small>Sistema de Gestão Integrada</small></div></div>
+   <h2>{mode==='forgot'?'Recuperar seu acesso':'Acesse seu workspace'}</h2>
+   <p>{mode==='forgot'?'Enviaremos um link seguro para redefinir sua senha.':'Cada área da operação, organizada em um único lugar.'}</p>
+   <label>E-mail corporativo<input type="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nome@empresa.com.br" /></label>
+   {mode!=='forgot'&&<label>Senha<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua senha de acesso" /></label>}
+   {error&&<div className="sgi-alert" role="alert">{error}</div>}{notice&&<div className="sgi-auth-notice" role="status">{notice}</div>}
+   <button type="submit" className="sgi-button sgi-auth-submit" disabled={busy}>{busy?'Processando…':mode==='forgot'?'Enviar link de recuperação':'Entrar no Commerce OS →'}</button>
+   {mode==='forgot'?<button type="button" className="sgi-auth-link" onClick={()=>{setMode('login');setError('')}}>Voltar ao login</button>:<button type="button" className="sgi-auth-link" onClick={()=>{setMode('forgot');setError('');setNotice('');setPassword('')}}>Esqueci minha senha</button>}
+   <div className="sgi-auth-security">Acesso controlado por perfil e empresa. Nunca compartilhe sua senha.</div>
+   </form><small className="sgi-auth-form-foot">Segurança, dados e experiência conectados.</small></section>
+ </div>;
  if(!loaded)return <div className="sgi-auth-page"><div className="sgi-login" role="status" aria-live="polite"><h2>Preparando seu acesso...</h2><p>Estamos conferindo suas empresas e permissões.</p>{permissionSlow&&<><div className="sgi-auth-notice">A consulta está demorando mais que o esperado. Você pode tentar novamente sem perder o login.</div><button className="sgi-button" onClick={()=>setPermissionRetry(v=>v+1)}>Tentar novamente</button></>}</div></div>;
  if(error)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Não foi possível verificar as permissões</h2><p>{error}</p><button className="sgi-button" onClick={()=>{setLoaded(false);setPermissionRetry(v=>v+1)}}>Tentar novamente</button><button className="sgi-auth-link" onClick={()=>void db.auth.signOut()}>Sair</button></div></div>;
  if(!memberships.length)return <div className="sgi-auth-page"><div className="sgi-login"><h2>Conta aguardando autorização</h2><p>O login foi realizado, mas não existe vínculo ativo com uma empresa ou loja.</p><p><strong>{user.email}</strong></p><button className="sgi-button" onClick={()=>void db.auth.signOut()}>Sair</button></div></div>;
