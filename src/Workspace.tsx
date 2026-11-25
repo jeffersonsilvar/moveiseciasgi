@@ -12,9 +12,10 @@ import {Production} from './pages/Production';
 import {Logistics,Manifests} from './pages/Logistics';
 import {Settings} from './pages/Settings';
 import {SellerReport} from './pages/SellerReport';
-const pages:Record<Page,string>={dashboard:'Visão geral',orders:'Pedidos e vendas','new-order':'Novo pedido','order-detail':'Detalhe do pedido',customers:'Clientes',catalog:'Produtos',finance:'Financeiro',production:'Fabricação',logistics:'Agenda e entregas',manifests:'Romaneios',settings:'Configurações','seller-report':'Relatório de vendedores'};
+import {CommercialSellers} from './pages/CommercialSellers';
+const pages:Record<Page,string>={dashboard:'Visão geral',orders:'Pedidos e vendas','new-order':'Novo pedido','order-detail':'Detalhe do pedido',customers:'Clientes',catalog:'Produtos',finance:'Financeiro',production:'Fabricação',logistics:'Agenda e entregas',manifests:'Romaneios',settings:'Configurações','seller-report':'Relatório de vendedores','commercial-sellers':'Vendedores'};
 const navigation: {group:string;items:{key:Page;label:string;icon:typeof LayoutGrid}[]}[]=[
- {group:'OPERAÇÃO',items:[{key:'dashboard',label:'Visão geral',icon:LayoutGrid},{key:'orders',label:'Pedidos e vendas',icon:ShoppingBag},{key:'customers',label:'Clientes',icon:Users},{key:'catalog',label:'Produtos',icon:Package}]},
+ {group:'OPERAÇÃO',items:[{key:'dashboard',label:'Visão geral',icon:LayoutGrid},{key:'orders',label:'Pedidos e vendas',icon:ShoppingBag},{key:'customers',label:'Clientes',icon:Users},{key:'commercial-sellers',label:'Vendedores',icon:Users},{key:'catalog',label:'Produtos',icon:Package}]},
  {group:'GESTÃO DE OPERAÇÃO',items:[{key:'finance',label:'Financeiro',icon:Wallet},{key:'production',label:'Fabricação',icon:Factory},{key:'logistics',label:'Agenda e entregas',icon:Truck},{key:'manifests',label:'Romaneios',icon:ClipboardList}]},
  {group:'GESTÃO',items:[{key:'seller-report',label:'Relatório de vendedores',icon:BarChart3},{key:'settings',label:'Configurações',icon:Settings2}]}
 ];
@@ -43,6 +44,7 @@ export default function Workspace({db,user,memberships,companies,branches,onSign
    if(key==='manifests'||key==='logistics')return canShipping||canWrite;
    if(key==='catalog')return true;
    if(key==='seller-report')return canManage||canWrite;
+   if(key==='commercial-sellers')return canManage||canWrite;
    return true;
  };
  return <div className="app-layout">
@@ -72,6 +74,7 @@ export default function Workspace({db,user,memberships,companies,branches,onSign
     {page==='manifests'&&<Manifests ctx={context}/>}
     {page==='settings'&&<Settings ctx={context}/>}
     {page==='seller-report'&&<SellerReport ctx={context}/>}
+    {page==='commercial-sellers'&&<CommercialSellers ctx={context}/>}
    </>}
   </main></div>
  </div>;
