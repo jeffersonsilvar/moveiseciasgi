@@ -48,3 +48,21 @@ export function friendlyDatabaseError(e:unknown){
  if(msg.includes('Desconto acima do limite'))return 'O desconto ultrapassa seu limite de autorização. Solicite aprovação da gerência.';
  return msg;
 }
+
+/** Frases e observações: capitaliza a primeira letra após ponto, !, ? ou quebra de linha. */
+export function sentenceCaseBR(value:string|null|undefined):string{
+ const acronyms=new Set(['cpf','cnpj','cep','mdf','mdp','led','pvc','pix','sku','d33']);
+ const normalized=String(value??'').trim().replace(/[ \t]+/g,' ').toLocaleLowerCase('pt-BR');
+ let sentenceStart=true;
+ return normalized.replace(/[\p{L}\p{N}]+|[^\p{L}\p{N}]+/gu,chunk=>{
+   if(!/[\p{L}\p{N}]/u.test(chunk)){if(/[.!?\n]/.test(chunk))sentenceStart=true;return chunk;}
+   const low=chunk.toLocaleLowerCase('pt-BR');
+   if(acronyms.has(low)){sentenceStart=false;return low.toUpperCase();}
+   if(!sentenceStart)return chunk;
+   sentenceStart=false;return chunk.charAt(0).toLocaleUpperCase('pt-BR')+chunk.slice(1);
+ });
+}
+/** Medidas não são nomes próprios: preservar unidade cm/mm e multiplicador x. */
+export function normalizeProductSize(value:string|null|undefined):string{
+ return String(value??'').trim().replace(/\s+/g,' ').replace(/\s*[×xX]\s*/g,' x ').replace(/\b(CM|MM|M)\b/gi,unit=>unit.toLocaleLowerCase('pt-BR'));
+}
