@@ -64,5 +64,5 @@ export function sentenceCaseBR(value:string|null|undefined):string{
 }
 /** Medidas não são nomes próprios: preservar unidade cm/mm e multiplicador x. */
 export function normalizeProductSize(value:string|null|undefined):string{
- return String(value??'').trim().replace(/\s+/g,' ').replace(/\s*[×xX]\s*/g,' x ').replace(/\b(CM|MM|M)\b/gi,unit=>unit.toLocaleLowerCase('pt-BR'));
+ return String(value??'').trim().replace(/\s+/g,' ').replace(/(?<=\d)\s*[×xX]\s*(?=\d)/g,' x ').replace(/\b(CM|MM|M)\b/gi,unit=>unit.toLocaleLowerCase('pt-BR'));
 }
