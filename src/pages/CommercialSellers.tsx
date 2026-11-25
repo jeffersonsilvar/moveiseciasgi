@@ -2,6 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {Plus,Save,Users} from 'lucide-react';
 import type {AppContext} from '../lib/types';
 import {Field,PageHead,Panel,ErrorBox} from '../components/UI';
+import {titleCaseBR} from '../lib/utils';
 
 type Seller={id:string;display_name:string;branch_id:string|null;active:boolean};
 export function CommercialSellers({ctx}:{ctx:AppContext}){
@@ -20,7 +21,7 @@ export function CommercialSellers({ctx}:{ctx:AppContext}){
   if(name.trim().length<2){setError('Informe nome completo do vendedor.');return;}
   setBusy(true);setError('');
   const {error:err}=await ctx.db.rpc('sgi_save_commercial_seller',{
-   p_company:ctx.companyId,p_branch:branch||null,p_name:name.trim(),p_id:editing,p_active:active
+   p_company:ctx.companyId,p_branch:branch||null,p_name:titleCaseBR(name),p_id:editing,p_active:active
   });
   setBusy(false);
   if(err){setError(err.message);return;}
