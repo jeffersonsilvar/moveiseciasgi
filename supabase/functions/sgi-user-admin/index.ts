@@ -71,6 +71,7 @@ Deno.serve(async (req: Request) => {
       }
       const { data, error } = await admin.auth.admin.createUser({
         email, password: b.password, email_confirm: true, user_metadata: { full_name: name },
+        app_metadata: { sgi_managed_tenant: b.tenant },
       });
       if (error || !data.user) {
         if (["email_exists", "user_already_exists"].includes(error?.code ?? ""))
@@ -98,6 +99,9 @@ Deno.serve(async (req: Request) => {
       .select("tenant_id,role").eq("user_id", b.user_id);
     if (le || !links?.length || links.some(x => x.tenant_id !== b.tenant || x.role === "tenant_admin"))
       return reply(403, "Conta Master, sem vínculo ou vinculada a outro grupo. Use a administração do Supabase.");
+    const { data: target, error: te } = await admin.auth.admin.getUserById(b.user_id);
+    if (te || target.user?.app_metadata?.sgi_managed_tenant !== b.tenant)
+      return reply(403, "Esta conta não foi criada pelo SGI. Redefina sua senha pelo Supabase.");
     const { error: recheck } = await caller.rpc("sgi_admin_list_users", { p_tenant: b.tenant });
     if (recheck) return reply(403, "Acesso administrativo revogado.");
     if (!await audit("user.password_reset_requested", b.user_id))
