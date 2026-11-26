@@ -8,7 +8,7 @@ import type {ManualDelivery,SmartTarget} from './SmartBooking';
 type Row={id:string;order_id:string|null;company_id:string;branch_id:string;branch_name:string;pool_id:string;pool_name:string;reference:string;customer:string;seller:string;products:string;city:string;neighborhood:string;cep:string;street:string;street_number:string;phone:string;notes:string;delivery_notes:string|null;delivery_date:string;status:string;service_type:string;is_manual:boolean;can_manage:boolean};
 type Day={pool_id:string;pool_name:string;delivery_date:string;capacity:number;used:number;active:boolean};
 type Event={action:string;created_at:string;actor:string;old_date:string|null;new_date:string|null;booked_date:string|null;reason:string|null};
-const initialManual=():ManualDelivery=>({reference:'',customer:'',seller:'',products:'',city:'',neighborhood:'',cep:'',street:'',number:'',phone:'',notes:'',released:false});
+const initialManual=():ManualDelivery=>({reference:'',customer:'',seller:'',seller_id:'',products:'',city:'',neighborhood:'',cep:'',street:'',number:'',phone:'',notes:'',released:false});
 const weekStart=(d:string)=>{const day=new Date(d+'T12:00:00Z').getUTCDay();return addDays(d,-((day+6)%7))};
 const monthStart=(d:string)=>d.slice(0,7)+'-01';
 const monthEnd=(d:string)=>{const x=new Date(monthStart(d)+'T12:00:00Z');x.setUTCMonth(x.getUTCMonth()+1);x.setUTCDate(0);return x.toISOString().slice(0,10)};
@@ -21,6 +21,11 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [manualOpen,setManualOpen]=useState(false);const [manual,setManual]=useState<ManualDelivery>(initialManual);const [manualBranch,setManualBranch]=useState(ctx.branchId);
  const [target,setTarget]=useState<SmartTarget|null>(null);const [history,setHistory]=useState<{row:Row;events:Event[]}|null>(null);const [historyBusy,setHistoryBusy]=useState(false);
  const [cepBusy,setCepBusy]=useState(false);
+ const [sellerOptions,setSellerOptions]=useState<{id:string;display_name:string}[]>([]);const [sellerScope,setSellerScope]=useState('');const [sellerLoading,setSellerLoading]=useState(false);const [sellerError,setSellerError]=useState('');const [sellerRefresh,setSellerRefresh]=useState(0);
+ const currentSellerScope=ctx.companyId+':'+manualBranch;
+ const availableSellers=sellerScope===currentSellerScope?sellerOptions:[];
+ const sellerReady=availableSellers.some(s=>s.id===manual.seller_id)&&!sellerLoading&&!sellerError;
+ useEffect(()=>{if(!manualOpen||!manualBranch)return;let live=true;setSellerLoading(true);setSellerError('');setSellerOptions([]);setSellerScope('');void Promise.resolve(ctx.db.rpc('sgi_commercial_sellers',{p_company:ctx.companyId,p_branch:manualBranch,p_include_inactive:false})).then(({data,error})=>{if(!live)return;if(error){setSellerError(error.message);return;}const options=(data??[]) as {id:string;display_name:string}[];setSellerOptions(options);setSellerScope(currentSellerScope);setManual(old=>options.some(s=>s.id===old.seller_id)?{...old,seller:options.find(s=>s.id===old.seller_id)!.display_name}:{...old,seller_id:'',seller:''});}).catch(()=>{if(live)setSellerError('Não foi possível consultar os vendedores.');}).finally(()=>{if(live)setSellerLoading(false)});return()=>{live=false}},[ctx.companyId,manualBranch,manualOpen,sellerRefresh]);
  const from=mode==='day'?anchor:mode==='week'?weekStart(anchor):monthStart(anchor);
  const to=mode==='day'?anchor:mode==='week'?addDays(from,6):monthEnd(anchor);
  const dates=useMemo(()=>{const result:string[]=[];for(let d=from;d<=to;d=addDays(d,1))result.push(d);return result},[from,to]);
@@ -41,7 +46,7 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
  };
  const closeTarget=()=>setTarget(null);
  const saved=(date:string)=>{setAnchor(date);setSelectedDay(date);setTarget(null);setManualOpen(false);setManual(initialManual());onChange()};
- const manualSubmit=(e:React.FormEvent)=>{e.preventDefault();if(!manual.released||!manageable.some(b=>b.id===manualBranch)||!manual.reference.trim()||manual.customer.trim().length<2||manual.seller.trim().length<2||manual.products.trim().length<2||manual.city.trim().length<2||manual.neighborhood.trim().length<2)return;
+ const manualSubmit=(e:React.FormEvent)=>{e.preventDefault();if(!manual.released||!sellerReady||!manageable.some(b=>b.id===manualBranch)||!manual.reference.trim()||manual.customer.trim().length<2||manual.seller.trim().length<2||manual.products.trim().length<2||manual.city.trim().length<2||manual.neighborhood.trim().length<2)return;
   if(digits(manual.cep).length!==0&&digits(manual.cep).length!==8){ctx.notify('Informe um CEP de oito dígitos ou deixe vazio.','error');return;}
   setTarget({company:ctx.companyId,branch:manualBranch,manual:{...manual},city:manual.city,neighborhood:manual.neighborhood,cep:manual.cep});
  };
@@ -73,10 +78,10 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
   </Panel>
   {manualOpen&&!target&&<Panel title="Nova entrega avulsa" sub="Registre um pedido do talão sem lançar venda, cliente ou recebimento fictício." action={<button className="btn secondary small" onClick={()=>setManualOpen(false)}>Fechar</button>}>
    <form className="form-grid cols3" onSubmit={manualSubmit}>
-    <Field label="Loja de origem"><select required value={manualBranch} onChange={e=>setManualBranch(e.target.value)}>{manageable.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
+    <Field label="Loja de origem"><select required value={manualBranch} onChange={e=>{setManualBranch(e.target.value);setManual(old=>({...old,seller_id:'',seller:''}));setSellerScope('')}}>{manageable.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
     <Field label="Número do talão / pedido *"><input required maxLength={80} value={manual.reference} onChange={e=>patch('reference',e.target.value)}/></Field>
     <Field label="Nome do cliente *"><input required maxLength={150} value={manual.customer} onChange={e=>patch('customer',e.target.value)}/></Field>
-    <Field label="Vendedor *"><input required maxLength={120} value={manual.seller} onChange={e=>patch('seller',e.target.value)}/></Field>
+    <Field label="Vendedor *" help="Vendedores ativos da loja selecionada."><select required disabled={sellerLoading||!!sellerError||!availableSellers.length} value={sellerReady?manual.seller_id:''} onChange={e=>{const s=availableSellers.find(x=>x.id===e.target.value);setManual(old=>({...old,seller_id:s?.id??'',seller:s?.display_name??''}))}}><option value="">{sellerLoading?'Carregando vendedores...':'Selecione um vendedor'}</option>{availableSellers.map(s=><option key={s.id} value={s.id}>{s.display_name}</option>)}</select>{sellerError&&<small role="alert">{sellerError}</small>}{!sellerLoading&&!sellerError&&!availableSellers.length&&<small>Nenhum vendedor ativo nesta loja. Cadastre ou vincule um vendedor no menu Vendedores.</small>}{!sellerLoading&&(sellerError||!availableSellers.length)&&<button type="button" className="btn secondary small" onClick={()=>setSellerRefresh(v=>v+1)}>Atualizar vendedores</button>}</Field>
     <Field label="Telefone"><input maxLength={40} value={manual.phone} onChange={e=>patch('phone',e.target.value)}/></Field>
     <Field label="CEP (opcional)"><div className="action-pair"><input value={formatCep(manual.cep)} onChange={e=>patch('cep',digits(e.target.value).slice(0,8))}/><button type="button" className="btn secondary small" disabled={cepBusy||digits(manual.cep).length!==8} onClick={()=>void lookupCep()}>{cepBusy?'Consultando...':'Buscar'}</button></div></Field>
     <Field label="Cidade *"><input required maxLength={100} value={manual.city} onChange={e=>patch('city',e.target.value)}/></Field>
@@ -86,7 +91,7 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
     <div className="smart-wide"><Field label="Produtos, quantidades e medidas *"><textarea required rows={3} maxLength={3000} value={manual.products} onChange={e=>patch('products',e.target.value)} placeholder="Ex.: 1 sofá 2,20 m; 1 mesa com 6 cadeiras"/></Field></div>
     <div className="smart-wide"><Field label="Observações de entrega"><textarea rows={2} maxLength={1000} value={manual.notes} onChange={e=>patch('notes',e.target.value)}/></Field></div>
     <label className="checkbox-bar smart-wide"><input type="checkbox" required checked={manual.released} onChange={e=>patch('released',e.target.checked)}/> Conferi no talão o pagamento/liberação financeira e a disponibilidade de todos os produtos.</label>
-    <div className="smart-wide panel-footer"><button className="btn primary" type="submit" disabled={!manual.released}><Route size={17}/> Consultar melhores datas</button></div>
+    <div className="smart-wide panel-footer"><button className="btn primary" type="submit" disabled={!manual.released||!sellerReady}><Route size={17}/> Consultar melhores datas</button></div>
    </form>
   </Panel>}
   {target&&<SmartBooking ctx={ctx} target={target} onSaved={saved} onClose={closeTarget}/>}
