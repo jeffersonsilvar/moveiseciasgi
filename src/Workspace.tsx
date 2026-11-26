@@ -25,19 +25,22 @@ export default function Workspace({db,user,memberships,companies,branches,onSign
  const canFinance=canManage||memberships.some(m=>m.active&&m.role==='finance');
  const canProduction=canManage||memberships.some(m=>m.active&&m.role==='production');
  const canShipping=canManage||memberships.some(m=>m.active&&m.role==='shipping');
- const canWrite=canManage||memberships.some(m=>m.active&&m.role==='seller');
+ const isCashier=memberships.some(m=>m.active&&m.role==='cashier')&&!memberships.some(m=>m.active&&m.role!=='cashier');
+ const canWrite=canManage||memberships.some(m=>m.active&&['seller','cashier'].includes(m.role));
+ const canCancel=memberships.some(m=>m.active&&['tenant_admin','company_admin'].includes(m.role));
  const [companyId,setCompanyId]=useState(companies[0]?.id??'');
  const allowedBranches=branches.filter(b=>b.company_id===companyId);
  const [preferredBranch,setPreferredBranch]=useState('');
  const branchId=allowedBranches.some(b=>b.id===preferredBranch)?preferredBranch:allowedBranches[0]?.id??'';
- const [page,setPage]=useState<Page>('dashboard');const [orderId,setOrderId]=useState<string|undefined>();
+ const [page,setPage]=useState<Page>(isCashier?'orders':'dashboard');const [orderId,setOrderId]=useState<string|undefined>();
  const [menu,setMenu]=useState(false);const [notice,setNotice]=useState<{text:string;type:'success'|'error'}|null>(null);
  const [version,setVersion]=useState(0);
  const notify=(text:string,type:'success'|'error'='success')=>{setNotice({text,type});};
- const go=(next:Page,id?:string)=>{setOrderId(id);setPage(next);setMenu(false);window.scrollTo({top:0,behavior:'instant'})};
- const context:AppContext={db,user,memberships,companies,branches,companyId,branchId,tenantId:memberships[0]?.tenant_id??'',isAdmin,canManage,canWrite,canFinance,canShipping,canProduction,notify,go,refresh:()=>setVersion(v=>v+1)};
+ const go=(next:Page,id?:string)=>{if(isCashier&&!['orders','new-order','order-detail','customers','catalog'].includes(next))return;setOrderId(id);setPage(next);setMenu(false);window.scrollTo({top:0,behavior:'instant'})};
+ const context:AppContext={db,user,memberships,companies,branches,companyId,branchId,tenantId:memberships[0]?.tenant_id??'',isAdmin,isCashier,canCancel,canManage,canWrite,canFinance,canShipping,canProduction,notify,go,refresh:()=>setVersion(v=>v+1)};
  const activeCompany=companies.find(c=>c.id===companyId);
  const allowed=(key:Page)=>{
+   if(isCashier)return ['orders','new-order','order-detail','customers','catalog'].includes(key);
    if(key==='settings')return isAdmin;
    if(key==='finance')return canFinance;
    if(key==='production')return canProduction;
@@ -51,12 +54,13 @@ export default function Workspace({db,user,memberships,companies,branches,onSign
   {menu&&<button className="mobile-backdrop" aria-label="Fechar menu" onClick={()=>setMenu(false)}/>}
   <aside className={'sidebar '+(menu?'show':'')}>
     <div className="brand"><div className="brand-icon"><img src="/brand-symbol.png" alt="Símbolo Móveis & Cia" /></div><div className="brand-copy"><strong>Móveis & Cia</strong><small>SGI · Commerce OS</small></div><button className="mobile-close" aria-label="Fechar navegação" onClick={()=>setMenu(false)}><X size={18}/></button></div>
-    <div className="workspace-switch"><div className="workspace-symbol">MC</div><div><strong>{activeCompany?.trade_name??'Móveis & Cia Gold'}</strong><span>{isAdmin?'Administração do grupo':'Operação comercial'}</span></div><ChevronDown size={15}/></div>
-    <nav aria-label="Menu principal">{navigation.map(section=><div className="nav-group" key={section.group}><div className="nav-group-title">{section.group}</div>{section.items.filter(x=>allowed(x.key)).map(({key,label,icon:Icon})=><button key={key} className={'nav-item '+((page===key||(key==='orders'&&['new-order','order-detail'].includes(page)))?'active':'')} onClick={()=>go(key)}><Icon size={17} strokeWidth={1.8}/>{label}</button>)}</div>)}</nav>
+    <div className="workspace-switch"><div className="workspace-symbol">MC</div><div><strong>{activeCompany?.trade_name??'Móveis & Cia Gold'}</strong><span>{isAdmin?'Administração do grupo':isCashier?'Caixa · Emissão de pedidos':'Operação comercial'}</span></div><ChevronDown size={15}/></div>
+    <nav aria-label="Menu principal">{navigation.filter(section=>section.items.some(x=>allowed(x.key))).map(section=><div className="nav-group" key={section.group}><div className="nav-group-title">{section.group}</div>{section.items.filter(x=>allowed(x.key)).map(({key,label,icon:Icon})=><button key={key} className={'nav-item '+((page===key||(key==='orders'&&['new-order','order-detail'].includes(page)))?'active':'')} onClick={()=>go(key)}><Icon size={17} strokeWidth={1.8}/>{label}</button>)}</div>)}</nav>
     <div className="sidebar-footer"><div className="online-dot"/><span>Ambiente conectado</span><small>Supabase · acesso controlado</small><button onClick={onSignOut}><LogOut size={15}/> Encerrar sessão</button></div>
   </aside>
   <div className="app-main"><header className="topbar"><div className="crumb"><button className="burger" onClick={()=>setMenu(true)} aria-label="Abrir menu"><Menu size={20}/></button><span>SGI</span><span className="crumb-divider">/</span><strong>{pages[page]}</strong></div><div className="topbar-right">
-   {companies.length>1&&<label className="header-company"><select value={companyId} onChange={e=>{setCompanyId(e.target.value);setPreferredBranch('');setVersion(v=>v+1);go('dashboard')}}>{companies.map(c=><option value={c.id} key={c.id}>{c.trade_name}</option>)}</select><ChevronDown size={14}/></label>}
+   {companies.length>1&&<label className="header-company"><select value={companyId} onChange={e=>{setCompanyId(e.target.value);setPreferredBranch('');setVersion(v=>v+1);go(isCashier?'orders':'dashboard')}}>{companies.map(c=><option value={c.id} key={c.id}>{c.trade_name}</option>)}</select><ChevronDown size={14}/></label>}
+   {allowedBranches.length>1&&<label className="header-company"><select aria-label="Loja de operação" value={branchId} onChange={e=>{setPreferredBranch(e.target.value);go(isCashier?'orders':'dashboard');setVersion(v=>v+1)}}>{allowedBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select><ChevronDown size={14}/></label>}
    <span className="secure-mini"><ShieldCheck size={14}/> Acesso seguro</span><div className="profile-avatar">{(user.email??'U').slice(0,2).toUpperCase()}</div>
   </div></header>
   <main className="screen" key={`${page}-${companyId}-${version}`}>
