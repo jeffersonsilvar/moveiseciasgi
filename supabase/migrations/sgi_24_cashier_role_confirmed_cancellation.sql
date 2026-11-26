@@ -25,7 +25,7 @@ AS $function$
     and (
       m.role in ('tenant_admin','company_admin')
       or (m.role='manager' and p_action not in ('admin.grant','admin.tenant','orders.cancel'))
-      or (m.role='seller' and p_action in ('people.read','people.write','catalog.read','orders.read','orders.read.all','orders.write','payments.read','report.read','shipping.consult','shipping.book')
+      or (m.role='seller' and p_action in ('people.read','people.write','catalog.read','orders.read','orders.read.all','orders.write','orders.legacy','payments.read','report.read','shipping.consult','shipping.book')
       or (m.role='cashier' and p_action in ('people.read','people.write','catalog.read','orders.read','orders.write','payments.read')))
       or (m.role='shipping' and p_action in ('people.read','catalog.read','orders.read','orders.read.all','shipping.read','shipping.write','shipping.consult','shipping.book'))
       or (m.role='finance' and p_action in ('people.read','orders.read','orders.read.all','payments.read','payments.write'))
@@ -527,7 +527,8 @@ begin
   end if;
   if v_requested_discount>v_max then raise exception 'Desconto acima do limite para seu perfil; solicite aprovação gerencial'; end if;
  end if;
- v:=public.create_order(p_company,p_branch,p_customer,p_seller,p_fulfillment,p_availability,p_items,
+ if not private.create_order_impl_guard(p_company,p_branch,p_customer) then raise exception 'Sem acesso ao cliente ou à loja do pedido'; end if;
+ v:=private.create_order_impl(p_company,p_branch,p_customer,p_seller,p_fulfillment,p_availability,p_items,
  p_discount_kind,p_discount_value,p_freight,p_assembly,p_payments,p_due_date,p_notes,p_address,p_confirm);
  update public.orders set client_request_id=p_request where id=v and company_id=p_company and created_by=auth.uid();
  return v;
@@ -623,7 +624,7 @@ alter table public.orders add column if not exists cancellation_reason text;
 alter table public.orders add column if not exists refund_reference text;
 
 -- Cancelamento transacional; jamais marca uma devolução não realizada.
-create or replace function private.sgi_cancel_confirmed_order(p_order uuid,p_reason text,p_refund_reference text default null)
+create or replace function private.sgi_cancel_confirmed_order(p_order uuid,p_reason text,p_expected_received numeric,p_refund_reference text default null)
 returns void language plpgsql security definer set search_path='' as $$
 declare o public.orders%rowtype;b public.delivery_bookings%rowtype;v_paid numeric;v_reason text:=btrim(coalesce(p_reason,''));v_ref text:=nullif(btrim(coalesce(p_refund_reference,'')),'');
 begin
@@ -634,7 +635,7 @@ begin
  if o.commercial_status<>'confirmed' or o.deleted_at is not null then raise exception 'Somente pedidos confirmados e não encerrados podem ser cancelados'; end if;
  if char_length(v_reason) not between 10 and 1000 then raise exception 'Informe motivo do cancelamento (10 a 1000 caracteres)'; end if;
  select coalesce(sum(amount),0) into v_paid from public.order_payments where order_id=o.id and status='confirmed';
- if v_paid is distinct from o.received_total then raise exception 'Divergência financeira: confira pagamentos antes de cancelar'; end if;
+ if v_paid is distinct from o.received_total or p_expected_received is distinct from v_paid then raise exception 'Divergência financeira: confira pagamentos antes de cancelar'; end if;
  if v_paid>0 and (v_ref is null or char_length(v_ref) not between 8 and 250) then raise exception 'Realize o estorno efetivo e informe a referência/comprovante antes de cancelar'; end if;
  if v_paid=0 and v_ref is not null then raise exception 'Pedido sem pagamentos não exige estorno'; end if;
  for b in select * from public.delivery_bookings where order_id=o.id and status<>'cancelled' order by id for update loop
@@ -653,11 +654,25 @@ begin
  insert into public.audit_logs(tenant_id,company_id,actor_id,action,entity_type,entity_id,changes)
  values(o.tenant_id,o.company_id,auth.uid(),'order.cancelled','order',o.id,jsonb_build_object('reason',v_reason,'original_total',o.grand_total,'refunded_amount',v_paid,'refund_reference',v_ref));
 end $$;
-revoke all on function private.sgi_cancel_confirmed_order(uuid,text,text) from public,anon;
-grant execute on function private.sgi_cancel_confirmed_order(uuid,text,text) to authenticated;
-create or replace function public.sgi_cancel_confirmed_order(p_order uuid,p_reason text,p_refund_reference text default null)
+revoke all on function private.sgi_cancel_confirmed_order(uuid,text,numeric,text) from public,anon;
+grant execute on function private.sgi_cancel_confirmed_order(uuid,text,numeric,text) to authenticated;
+create or replace function public.sgi_cancel_confirmed_order(p_order uuid,p_reason text,p_expected_received numeric,p_refund_reference text default null)
 returns void language sql security invoker set search_path='' as $$
- select private.sgi_cancel_confirmed_order($1,$2,$3)
+ select private.sgi_cancel_confirmed_order($1,$2,$3,$4)
 $$;
-revoke all on function public.sgi_cancel_confirmed_order(uuid,text,text) from public,anon;
-grant execute on function public.sgi_cancel_confirmed_order(uuid,text,text) to authenticated;
+revoke all on function public.sgi_cancel_confirmed_order(uuid,text,numeric,text) from public,anon;
+grant execute on function public.sgi_cancel_confirmed_order(uuid,text,numeric,text) to authenticated;
+
+create or replace function public.create_order(p_company uuid,p_branch uuid,p_customer uuid,p_seller uuid,p_fulfillment text,p_availability text,p_items jsonb,p_discount_kind text,p_discount_value numeric,p_freight numeric,p_assembly numeric,p_payments jsonb,p_due_date date,p_notes text,p_address uuid,p_confirm boolean)
+returns uuid language plpgsql set search_path='' as $$
+begin
+ if not private.allowed(p_company,p_branch,'orders.legacy') or not private.create_order_impl_guard(p_company,p_branch,p_customer)
+ then raise exception 'Use o fluxo de emissão comercial autorizado'; end if;
+ return private.create_order_impl(p_company,p_branch,p_customer,p_seller,p_fulfillment,p_availability,p_items,p_discount_kind,p_discount_value,p_freight,p_assembly,p_payments,p_due_date,p_notes,p_address,p_confirm);
+end $$;
+create or replace function public.sgi_create_order_v2(p_request uuid,p_company uuid,p_branch uuid,p_customer uuid,p_seller uuid,p_fulfillment text,p_availability text,p_items jsonb,p_discount_kind text,p_discount_value numeric,p_freight numeric,p_assembly numeric,p_payments jsonb,p_due_date date,p_notes text,p_address uuid,p_confirm boolean)
+returns uuid language plpgsql set search_path='' as $$
+begin
+ if not private.allowed(p_company,p_branch,'orders.legacy') then raise exception 'Use o fluxo de emissão comercial autorizado'; end if;
+ return private.sgi_create_order_idempotent(p_request,p_company,p_branch,p_customer,p_seller,p_fulfillment,p_availability,p_items,p_discount_kind,p_discount_value,p_freight,p_assembly,p_payments,p_due_date,p_notes,p_address,p_confirm);
+end $$;
