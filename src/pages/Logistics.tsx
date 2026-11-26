@@ -16,11 +16,12 @@ const queueStage:{[key:string]:{label:string;description:string;className:string
 };
 
 export function Logistics({ctx}:{ctx:AppContext}){
- const [version,setVersion]=useState(0);
+ const [version,setVersion]=useState(0);const [opportunities,setOpportunities]=useState<{cluster_key:string;cluster:string;pending:number;oldest:string;first_order:string;destinations:string[]}[]>([]);const [opportunityError,setOpportunityError]=useState('');
  const [queue,setQueue]=useState<DispatchQueueRow[]>([]);const [queuePage,setQueuePage]=useState(0);const [queueTotal,setQueueTotal]=useState(0);const [queueError,setQueueError]=useState('');
 
  useEffect(()=>{const interval=window.setInterval(()=>setVersion(v=>v+1),30000);return()=>window.clearInterval(interval)},[]);
  useEffect(()=>{setQueuePage(0)},[ctx.companyId]);
+ useEffect(()=>{let live=true;void ctx.db.rpc('sgi_smart_route_opportunities',{p_company:ctx.companyId}).then(({data,error})=>{if(live){setOpportunities(data??[]);setOpportunityError(error?.message??'')}});return()=>{live=false}},[ctx.companyId,version]);
  useEffect(()=>{let alive=true;const load=async()=>{const {data,error}=await ctx.db.rpc('sgi_dispatch_queue',{p_company:ctx.companyId,p_page:queuePage,p_size:10});if(!alive)return;
   if(error){setQueueError(error.message);setQueue([]);setQueueTotal(0);return}
   const payload=data as {rows?:DispatchQueueRow[];total?:number}|null;
@@ -28,6 +29,11 @@ export function Logistics({ctx}:{ctx:AppContext}){
  };void load();return()=>{alive=false}},[ctx.companyId,queuePage,version]);
  return <><PageHead eyebrow="OPERAÇÃO / LOGÍSTICA" title="Central de inteligência logística" desc="Smart Agenda · Pedidos digitais e talões, capacidade compartilhada e remarcações."><button className="btn secondary" onClick={()=>ctx.go('manifests')}><ClipboardList size={16}/> Romaneios</button><button className="btn secondary" onClick={()=>setVersion(v=>v+1)}>Atualizar</button></PageHead>
  <SmartAgenda ctx={ctx} revision={version} onChange={()=>setVersion(v=>v+1)}/>
+ <Panel title="Oportunidades de novas rotas" sub="Pedidos liberados e sem data agrupados por região cadastrada ou mesmo bairro. A abertura da data e da capacidade precisa ser aprovada pela expedição.">
+  {opportunityError&&<ErrorBox text={opportunityError}/>}
+  <div className="smart-options">{opportunities.map(o=><div key={o.cluster_key} className="smart-option"><div><strong>{o.cluster}</strong><small>{o.destinations.join(' · ')}</small></div><div><strong>{o.pending} pedido(s)</strong><small>Mais antigo: {dateBR(o.oldest)}</small></div><div><button className="btn secondary small" onClick={()=>ctx.go('order-detail',o.first_order)}><Route size={15}/> Planejar primeiro pedido</button></div></div>)}</div>
+  {!opportunities.length&&!opportunityError&&<Empty title="Nenhuma rota pendente sugerida" description="Novas oportunidades aparecem após a liberação dos pedidos."/>}
+ </Panel>
  <Panel title="Fila operacional · pedidos sem agendamento" sub="A liberação da fabricação não cria automaticamente uma data. Estes pedidos continuam visíveis até a reserva ser confirmada.">
   {queueError&&<ErrorBox text={queueError}/>}
   <div className="table-scroll"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Destino</th><th>Próxima ação</th><th></th></tr></thead><tbody>
