@@ -5,7 +5,7 @@ import type {AppContext} from '../lib/types';
 import {dateBR,digits,today} from '../lib/utils';
 import {Field,Panel,ErrorBox} from './UI';
 
-export type ManualDelivery={reference:string;customer:string;seller:string;products:string;city:string;neighborhood:string;cep:string;street:string;number:string;phone:string;notes:string;released:boolean};
+export type ManualDelivery={reference:string;customer:string;seller:string;seller_id?:string;products:string;city:string;neighborhood:string;cep:string;street:string;number:string;phone:string;notes:string;released:boolean};
 export type SmartTarget={company:string;branch:string;order?:string|null;manual?:ManualDelivery;booking?:string;originalDate?:string;pool?:string;city:string;neighborhood:string;cep?:string};
 type Suggestion={id:string;pool_id:string;pool_name:string;delivery_date:string;capacity:number;used:number;signal:string;nearest_km:number|null;same_neighborhood:number;same_city:number;geo_count:number};
 const signalNames:Record<string,string>={same_neighborhood:'Mesmo bairro',nearby:'CEP próximo',moderate:'Proximidade moderada',same_region:'Mesma região cadastrada',same_city:'Mesma cidade (sem distância validada)',empty:'Rota sem entregas',far:'Destino distante',unknown:'Proximidade não determinada'};
