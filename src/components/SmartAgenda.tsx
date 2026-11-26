@@ -26,7 +26,7 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
  const dates=useMemo(()=>{const result:string[]=[];for(let d=from;d<=to;d=addDays(d,1))result.push(d);return result},[from,to]);
  const branches=ctx.branches.filter(b=>b.company_id===ctx.companyId&&b.active);
  const manageable=branches.filter(b=>scopedLogistics(ctx,ctx.companyId,b.id));
- useEffect(()=>{let alive=true;setBusy(true);setError('');void ctx.db.rpc('sgi_smart_agenda',{p_company:ctx.companyId,p_from:from,p_to:to}).then(({data,error:err})=>{
+ useEffect(()=>{let alive=true;setBusy(true);setError('');void Promise.resolve(ctx.db.rpc('sgi_smart_agenda',{p_company:ctx.companyId,p_from:from,p_to:to})).then(({data,error:err})=>{
   if(!alive)return;setBusy(false);if(err){setError(err.message);setRows([]);setDays([]);return;}setRows(data?.rows??[]);setDays(data?.days??[]);
  }).catch(()=>{if(alive){setBusy(false);setError('Não foi possível consultar a agenda.')}});return()=>{alive=false}},[ctx.companyId,from,to,revision]);
  const filtered=rows.filter(r=>(source==='all'||(source==='manual')===r.is_manual)&&(branch==='all'||branch===r.branch_id)&&(status==='all'||(status==='active'?activeStatuses.includes(r.status):r.status===status))&&(!search.trim()||[r.reference,r.customer,r.seller,r.products,r.city,r.neighborhood].join(' ').toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR'))));
