@@ -46,18 +46,17 @@ export function buildOrderPrintHtml(order:Order,sellerName:string,company?:Compa
  <div class="section-title">Pagamentos registrados</div><table class="payment-table"><thead><tr><th>Forma</th><th>Condição</th><th>Registrado em</th><th class="right">Valor</th><th>Situação</th></tr></thead><tbody>${payRows||'<tr><td colspan="5" style="color:#718174">Nenhum recebimento registrado até o momento.</td></tr>'}</tbody></table>
  <div class="section-title">Observações e orientações</div><div class="notes">${h(order.notes?.trim()||'Sem observações adicionais.')}</div>
  <p class="help">${draft?'ATENÇÃO: este é um rascunho ainda não confirmado; não comprova pagamento, entrega ou contratação definitiva.':'A disponibilidade, a fabricação e a entrega dependem das condições registradas e das confirmações dos respectivos setores.'} Prazo e agendamento podem ser atualizados conforme o andamento do pedido.</p>
- <section class="terms" aria-label="Condições comerciais e direitos do consumidor">
-  <div class="terms-title">Condições comerciais e direitos do consumidor</div>
+ <section class="terms" aria-label="Termos e condições da loja">
+  <div class="terms-title">Termos e condições da loja</div>
   <ol>
-   <li><strong>Conferência na entrega:</strong> confira modelo, medidas, acabamento e estado de conservação dos produtos. Registre eventuais avarias ou divergências no comprovante e comunique a loja. A conferência não afasta os direitos legais por vícios não aparentes.</li>
-   <li><strong>Garantias:</strong> os produtos têm garantia legal na forma do Código de Defesa do Consumidor. Para sofás, a loja informa garantia contratual de 6 meses, conforme termo específico, sem prejuízo da garantia legal. Eventuais limites de cobertura contratual para espuma e estrutura não excluem direitos legais relativos ao tecido ou a outros componentes.</li>
-   <li><strong>Produtos sob medida:</strong> características e medidas aprovadas devem ser conferidas antes da fabricação. Em compras presenciais, a loja não oferece troca por mera preferência, ressalvados defeitos, divergência da oferta, condições acordadas e demais direitos previstos em lei.</li>
-   <li><strong>Peças de mostruário:</strong> eventuais marcas ou particularidades conhecidas devem ser informadas e registradas na venda. Permanecem assegurados os direitos legais relativos a vícios não informados.</li>
-   <li><strong>Vidros e espelhos:</strong> recomenda-se conferir a integridade na entrega e registrar qualquer avaria. Essa conferência não elimina a garantia legal nem a responsabilidade aplicável.</li>
-   <li><strong>Impermeabilização:</strong> quando contratada à parte com prestador terceiro, as condições do serviço devem ser apresentadas ao cliente, preservadas as responsabilidades legalmente aplicáveis aos fornecedores envolvidos.</li>
-   <li><strong>Trocas, devoluções e arrependimento:</strong> observam o Código de Defesa do Consumidor. Nas contratações fora do estabelecimento comercial, aplica-se, quando cabível, o direito de arrependimento de 7 dias, nos termos do art. 49 do CDC.</li>
+   <li>Favor conferir mercadoria recebida quanto ao seu estado de conservação pois não aceitamos devoluções.</li>
+   <li>GARANTIA RESTRITA À ESPUMA E ESTRUTURA NÃO GARANTIMOS TECIDO.</li>
+   <li>NÃO ACEITAMOS DEVOLUÇÃO DE PRODUTOS SOB MEDIDAS.</li>
+   <li>A Móveis &amp; Cia não se responsabiliza pelo serviço de impermeabilização, este serviço é terceirizado, de acordo com a solicitação do cliente.</li>
+   <li>Ao comprar peça do mostruário, verifique as condições no ato da compra. Produtos de mostruário não tem garantia ou troca.</li>
+   <li>Ao receber produto que contenha vidro/espelho em geral, favor conferir no ato do recebimento, pois o mesmo não dispõe de garantia.</li>
+   <li>Sofás possuem garantia de 6 meses.</li>
   </ol>
-  <p class="terms-note">A ciência destas condições não implica renúncia a direitos assegurados pela legislação de proteção ao consumidor.</p>
  </section>
  <div class="signatures"><div>Assinatura do cliente — ciência do pedido e das condições comerciais<br>Data: ____ / ____ / ______</div></div>
  <div class="legal"><span>Gerado pelo Móveis & Cia SGI · Commerce OS</span><span>Documento comercial — não substitui nota fiscal.</span></div>
