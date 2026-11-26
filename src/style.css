@@ -43,3 +43,12 @@
 .zone-area-chip button{background:transparent;border:0;color:#7e5148;cursor:pointer;padding:3px;border-radius:5px;display:flex;align-items:center}
 .zone-area-chip button:focus-visible{outline:2px solid #c99400;outline-offset:1px}
 .zone-area-chip button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Atribuição comercial — utiliza os mesmos campos e botões dos demais formulários SGI. */
+.commercial-assignment-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(145px,.8fr) minmax(155px,.85fr);align-items:end;gap:16px}
+.commercial-assignment-grid .field{min-width:0}
+.commercial-assignment-grid .field select,.commercial-assignment-grid .field input{height:43px}
+.commercial-assignment-action{min-width:0}
+.commercial-assignment-action .btn{width:100%;min-height:43px}
+@media(max-width:1080px){.commercial-assignment-grid{grid-template-columns:minmax(0,1fr) minmax(130px,.7fr)}.commercial-assignment-action{grid-column:1/-1;display:flex;justify-content:flex-end}.commercial-assignment-action .btn{width:auto;min-width:180px}}
+@media(max-width:620px){.commercial-assignment-grid{grid-template-columns:minmax(0,1fr)}.commercial-assignment-action{grid-column:auto}.commercial-assignment-action .btn{width:100%}}
