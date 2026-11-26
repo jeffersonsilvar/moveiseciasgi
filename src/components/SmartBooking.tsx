@@ -13,7 +13,7 @@ export const scopedLogistics=(ctx:AppContext,company:string,branch:string)=>ctx.
 const addDays=(date:string,n:number)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 export {addDays};
 
-export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target:SmartTarget;onSaved:()=>void;onClose?:()=>void}){
+export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void}){
  const canOpen=scopedLogistics(ctx,target.company,target.branch);
  const [pools,setPools]=useState<{id:string;name:string}[]>([]);
  const [options,setOptions]=useState<Suggestion[]>([]);
@@ -62,11 +62,11 @@ export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target
   try{
    const {error:err}=await ctx.db.rpc('sgi_smart_schedule',{p_company:target.company,p_branch:target.branch,p_order:target.order??null,p_manual:target.manual??null,p_pool:selectedPool,p_date:selectedDate,p_capacity:openNew?Number(capacity):null,p_booking:target.booking??null,p_expected_date:target.originalDate??null,p_reason:target.booking?reason.trim():null});
    if(err){setError(err.message);return;}
-   ctx.notify(target.booking?'Entrega remarcada com histórico.':'Entrega agendada com capacidade reservada.');onSaved();
+   ctx.notify(target.booking?'Entrega remarcada com histórico.':'Entrega agendada com capacidade reservada.');onSaved(selectedDate!);
   }catch(e){setError(e instanceof Error?e.message:'Resultado não confirmado. Atualize a agenda antes de repetir.');}finally{setBusy(false);}
  };
  return <Panel title={target.booking?'Remarcar entrega':'Assistente de agendamento'} sub="A mesma inteligência para pedidos digitais e entregas avulsas." action={onClose&&<button type="button" className="btn secondary small" disabled={busy} onClick={onClose}>Fechar</button>}>
-  <div className="subtle-info"><MapPin size={18}/><div><strong>{target.neighborhood} · {target.city}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
+  <div className="subtle-info"><MapPin size={18}/><div><strong>{target.manual&&('Talão '+target.manual.reference+' · '+target.manual.customer+' — ')}{target.neighborhood} · {target.city}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
   {error&&<ErrorBox text={error}/>}
   <div className="toolbar"><span className="tiny-muted">Datas abertas e vagas reais · próximos 45 dias</span><button type="button" className="btn secondary small" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={14}/> Recalcular</button></div>
   {loading?<p role="status">Calculando os melhores encaixes...</p>:<>
