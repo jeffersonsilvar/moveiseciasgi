@@ -12,7 +12,7 @@ const initialManual=():ManualDelivery=>({reference:'',customer:'',seller:'',sell
 const weekStart=(d:string)=>{const day=new Date(d+'T12:00:00Z').getUTCDay();return addDays(d,-((day+6)%7))};
 const monthStart=(d:string)=>d.slice(0,7)+'-01';
 const monthEnd=(d:string)=>{const x=new Date(monthStart(d)+'T12:00:00Z');x.setUTCMonth(x.getUTCMonth()+1);x.setUTCDate(0);return x.toISOString().slice(0,10)};
-const eventNames:Record<string,string>={'smart_delivery.booked':'Agendamento registrado','smart_delivery.rescheduled':'Entrega remarcada','delivery.booked':'Agendamento registrado','delivery.cancelled':'Agendamento cancelado','delivery.auto_cancel_for_production':'Reserva cancelada pela fabricação','manifest.stop_added':'Incluída no romaneio','delivery.completed':'Entrega finalizada / ocorrência'};
+const eventNames:Record<string,string>={'smart_delivery.booked':'Agendamento registrado','smart_delivery.rescheduled':'Entrega remarcada','delivery.booked':'Agendamento registrado','delivery.cancelled':'Agendamento cancelado','delivery.auto_cancel_for_production':'Reserva cancelada pela fabricação','manifest.stop_added':'Incluída no romaneio','manifest.stop_removed':'Retirada do romaneio — devolvida à agenda','delivery.completed':'Entrega finalizada / ocorrência'};
 const activeStatuses=['scheduled','loaded','in_route'];
 export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:number;onChange:()=>void}){
  const [anchor,setAnchor]=useState(today());const [mode,setMode]=useState<'day'|'week'|'month'>('week');
