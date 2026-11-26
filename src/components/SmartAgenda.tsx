@@ -40,7 +40,7 @@ export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:num
   catch{ctx.notify('Consulta de CEP indisponível. Preencha manualmente.','error');}finally{setCepBusy(false)}
  };
  const closeTarget=()=>setTarget(null);
- const saved=()=>{setTarget(null);setManualOpen(false);setManual(initialManual());onChange()};
+ const saved=(date:string)=>{setAnchor(date);setSelectedDay(date);setTarget(null);setManualOpen(false);setManual(initialManual());onChange()};
  const manualSubmit=(e:React.FormEvent)=>{e.preventDefault();if(!manual.released||!manageable.some(b=>b.id===manualBranch)||!manual.reference.trim()||manual.customer.trim().length<2||manual.seller.trim().length<2||manual.products.trim().length<2||manual.city.trim().length<2||manual.neighborhood.trim().length<2)return;
   if(digits(manual.cep).length!==0&&digits(manual.cep).length!==8){ctx.notify('Informe um CEP de oito dígitos ou deixe vazio.','error');return;}
   setTarget({company:ctx.companyId,branch:manualBranch,manual:{...manual},city:manual.city,neighborhood:manual.neighborhood,cep:manual.cep});
