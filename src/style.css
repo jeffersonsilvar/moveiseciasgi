@@ -59,3 +59,51 @@
 .showroom-condition textarea{width:100%;min-width:0;resize:vertical;border:1px solid #d9dccd;border-radius:8px;padding:10px 12px;font-size:12px;background:#fff;font-family:inherit}
 .showroom-condition small{font-size:10px;color:#927038}
 .showroom-note{display:block;margin-top:6px;color:#82612e;white-space:pre-wrap;line-height:1.4}
+
+/* Central de configurações: navegação por área, formulários sem sobreposição. */
+.settings-workspace{display:grid;grid-template-columns:minmax(208px,235px) minmax(0,1fr);gap:22px;align-items:start}
+.settings-navigation{min-width:0;background:#fff;border:1px solid #e3ebe5;border-radius:15px;padding:13px;position:sticky;top:18px;box-shadow:var(--shadow)}
+.settings-nav-heading{padding:8px 10px 16px;color:#769181;font-size:10px;letter-spacing:1.2px;font-weight:800}
+.settings-nav-heading small{display:block;font-size:11px;font-weight:500;letter-spacing:0;margin-top:5px;color:#829287}
+.settings-navigation nav{display:grid;gap:5px}
+.settings-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:12px 9px;border:1px solid transparent;border-radius:10px;background:transparent;color:#4b6153;text-align:left;cursor:pointer;min-width:0;font-family:inherit}
+.settings-nav-item:hover{background:#f3f7f3}
+.settings-nav-item.active{border-color:#c7dfcf;background:#e8f3ec;color:#185b3d}
+.settings-nav-item:focus-visible{outline:2px solid #22674b;outline-offset:2px}
+.settings-nav-icon{flex:none;display:grid;place-items:center;width:33px;height:33px;border-radius:9px;background:#f0f5f0;color:#527b61}
+.settings-nav-item.active .settings-nav-icon{background:#17664c;color:#fff}
+.settings-nav-label{flex:1;min-width:0}
+.settings-nav-label strong{display:block;font-size:12px;font-weight:800;line-height:1.35}
+.settings-nav-label small{display:block;font-size:10px;line-height:1.35;margin-top:4px;color:#788b7e}
+.settings-nav-chevron{flex:none;color:#90a799}
+.settings-nav-item.active .settings-nav-chevron{color:#17664c}
+.settings-nav-foot{border-top:1px solid #edf1ed;display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:15px 9px 4px;color:#748a7b;font-size:10px;line-height:1.5}
+.settings-nav-foot svg{flex:none;color:#2c8057}
+.settings-content{min-width:0}
+.settings-section-head{display:flex;gap:15px;align-items:center;padding:19px 21px;background:#fff;border:1px solid #e3ebe5;border-radius:14px;margin-bottom:17px}
+.settings-section-icon{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:12px;color:#22674b;background:#e9f4ec}
+.settings-section-head .eyebrow{font-size:9px}
+.settings-section-head h2{font-size:20px;letter-spacing:-.5px;color:#243a2d;margin:5px 0}
+.settings-section-head p{color:#75877b;font-size:12px;line-height:1.5;margin:0}
+.settings-section-body{display:grid;gap:16px;min-width:0}
+.settings-section-body[hidden]{display:none!important}
+.settings-section-body .panel{margin:0;min-width:0}
+.settings-section-body .panel-head p{color:#738378;line-height:1.5}
+.settings-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.settings-instructions{display:flex;align-items:flex-start;gap:11px;padding:14px 15px;background:#eff6f1;border:1px solid #dfece2;border-radius:10px;margin-bottom:18px;color:#32664b}
+.settings-instructions svg{flex:none;margin-top:2px}
+.settings-instructions strong{display:block;font-size:12px}
+.settings-instructions p{font-size:11px;line-height:1.55;margin:4px 0 0;color:#547260}
+.settings-user-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings-form-wide{grid-column:1/-1}
+.settings-profile-note{padding:11px 13px;border-radius:8px;background:#f6f8f5;color:#597363;font-size:11px;line-height:1.5}
+.settings-form-action{display:flex;justify-content:flex-end}
+.settings-users-section .table-scroll table{min-width:660px}
+.settings-users-section td{padding:12px 10px;overflow-wrap:anywhere}
+.settings-users-section th{padding:12px 10px}
+.settings-users-section .action-pair{display:flex;flex-wrap:wrap;gap:5px;min-width:115px}
+.settings-users-section .action-pair .btn{white-space:nowrap}
+.settings-policy-section{max-width:760px}
+@media(max-width:1250px){.settings-pair{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1050px){.settings-workspace{grid-template-columns:minmax(0,1fr)}.settings-navigation{position:static}.settings-navigation nav{grid-template-columns:repeat(3,minmax(0,1fr))}.settings-nav-foot{display:none}.settings-nav-heading small{display:inline;margin-left:12px}.settings-nav-chevron{display:none}.settings-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.settings-navigation nav{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav-item{padding:9px 6px;gap:7px}.settings-nav-label small{display:none}.settings-nav-icon{width:29px;height:29px}.settings-nav-label strong{font-size:11px}.settings-pair,.settings-user-form{grid-template-columns:minmax(0,1fr)}.settings-section-head{padding:15px}.settings-section-head h2{font-size:17px}.settings-section-icon{width:40px;height:40px}.settings-form-action .btn{width:100%}}
