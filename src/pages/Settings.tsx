@@ -2,17 +2,19 @@ import {useEffect,useState} from 'react';
 import {Building2,CalendarDays,ChevronRight,MapPin,Percent,Plus,ShieldCheck,Truck,UserRound,Users} from 'lucide-react';
 import type {AppContext} from '../lib/types';
 import {Field,PageHead,Panel} from '../components/UI';
+import {LogisticsPolicySettings} from '../components/LogisticsPolicySettings';
 import {RegionsManager} from '../components/RegionsManager';
 import {UserManager} from '../components/UserManager';
 import {userAdmin,strongPassword,passwordHint} from '../lib/userAdmin';
 type Region={id:string;tenant_id:string;name:string;active:boolean};
 type Pool={id:string;name:string};
 type Slot={id:string;pool_id:string;region_id:string;delivery_date:string;capacity:number;reserved:number;active:boolean};
-type SettingsSection='users'|'organization'|'commercial'|'zones'|'capacity'|'fleet';
+type SettingsSection='users'|'organization'|'commercial'|'zones'|'capacity'|'fleet'|'logistics';
 const settingsSections=[
  {id:'users',title:'Usuários e acessos',summary:'Perfis e permissões',description:'Gerencie quem pode acessar o SGI e quais atividades cada usuário pode executar.',icon:Users},
  {id:'organization',title:'Empresas e lojas',summary:'Estrutura do grupo',description:'Cadastre empresas e vincule as unidades de atendimento à empresa correta.',icon:Building2},
  {id:'commercial',title:'Política comercial',summary:'Descontos e regras',description:'Defina os limites comerciais aplicados às vendas da empresa selecionada.',icon:Percent},
+ {id:'logistics',title:'Parâmetros logísticos',summary:'Regras da operação',description:'Ative ou desative exigências de frota e motorista conforme a maturidade da operação.',icon:ShieldCheck},
  {id:'zones',title:'Zonas de entrega',summary:'Regiões e bairros',description:'Organize as áreas atendidas pela expedição e vincule bairros às regiões.',icon:MapPin},
  {id:'capacity',title:'Capacidade de entrega',summary:'Datas e vagas',description:'Configure a disponibilidade de atendimento por data, região e central logística.',icon:CalendarDays},
  {id:'fleet',title:'Frota e motoristas',summary:'Recursos de transporte',description:'Cadastre os veículos e motoristas utilizados pela central de expedição.',icon:Truck},
@@ -84,6 +86,7 @@ export function Settings({ctx}:{ctx:AppContext}){
    <div hidden={section!=='commercial'} className="settings-section-body settings-policy-section">
     <Panel title="Política comercial" sub="Limite máximo de desconto para vendedores. Exceções dependem de autorização gerencial."><div className="form-stack"><Field label="Limite percentual do vendedor (%)"><input type="number" min="0" max="100" step="0.5" value={sellerPct} onChange={e=>setSellerPct(e.target.value)}/></Field><label className="checkbox-bar"><input type="checkbox" checked={requireReview} onChange={e=>setRequireReview(e.target.checked)}/> Revisão financeira (configuração preparatória)</label><button className="btn secondary" disabled={busy} onClick={()=>invoke('sgi_set_sales_policy',{p_company:ctx.companyId,p_pct:Number(sellerPct),p_review:requireReview},'Limite comercial salvo e auditado.')}><ShieldCheck size={16}/> Salvar política</button><p className="tiny-muted">Para campanhas específicas (ex.: 20% somente em sofás/poltronas), mantenha o limite geral conservador até configurar a tabela de campanhas por categoria.</p></div></Panel>
    </div>
+   {section==='logistics'&&<div className="settings-section-body"><LogisticsPolicySettings ctx={ctx}/></div>}
    <div hidden={section!=='zones'} className="settings-section-body">
     {section==='zones'&&<RegionsManager ctx={ctx} onChange={()=>setVersion(v=>v+1)}/>}
    </div>
