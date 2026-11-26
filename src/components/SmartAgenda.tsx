@@ -1,0 +1,90 @@
+import {useEffect,useMemo,useState} from 'react';
+import {CalendarDays,ChevronLeft,ChevronRight,ClipboardList,MapPin,Plus,Printer,Route,Search,Truck} from 'lucide-react';
+import type {AppContext} from '../lib/types';
+import {dateBR,dateTimeBR,digits,escapeHtml,formatCep,today} from '../lib/utils';
+import {Empty,ErrorBox,Field,Panel,Status} from './UI';
+import {SmartBooking,addDays,scopedLogistics} from './SmartBooking';
+import type {ManualDelivery,SmartTarget} from './SmartBooking';
+type Row={id:string;order_id:string|null;company_id:string;branch_id:string;branch_name:string;pool_id:string;pool_name:string;reference:string;customer:string;seller:string;products:string;city:string;neighborhood:string;cep:string;street:string;street_number:string;phone:string;notes:string;delivery_notes:string|null;delivery_date:string;status:string;service_type:string;is_manual:boolean;can_manage:boolean};
+type Day={pool_id:string;pool_name:string;delivery_date:string;capacity:number;used:number;active:boolean};
+type Event={action:string;created_at:string;actor:string;old_date:string|null;new_date:string|null;booked_date:string|null;reason:string|null};
+const initialManual=():ManualDelivery=>({reference:'',customer:'',seller:'',products:'',city:'',neighborhood:'',cep:'',street:'',number:'',phone:'',notes:'',released:false});
+const weekStart=(d:string)=>{const day=new Date(d+'T12:00:00Z').getUTCDay();return addDays(d,-((day+6)%7))};
+const monthStart=(d:string)=>d.slice(0,7)+'-01';
+const monthEnd=(d:string)=>{const x=new Date(monthStart(d)+'T12:00:00Z');x.setUTCMonth(x.getUTCMonth()+1);x.setUTCDate(0);return x.toISOString().slice(0,10)};
+const eventNames:Record<string,string>={'smart_delivery.booked':'Agendamento registrado','smart_delivery.rescheduled':'Entrega remarcada','delivery.booked':'Agendamento registrado','delivery.cancelled':'Agendamento cancelado','delivery.auto_cancel_for_production':'Reserva cancelada pela fabricação','manifest.stop_added':'Incluída no romaneio','delivery.completed':'Entrega finalizada / ocorrência'};
+const activeStatuses=['scheduled','loaded','in_route'];
+export function SmartAgenda({ctx,revision,onChange}:{ctx:AppContext;revision:number;onChange:()=>void}){
+ const [anchor,setAnchor]=useState(today());const [mode,setMode]=useState<'day'|'week'|'month'>('week');
+ const [selectedDay,setSelectedDay]=useState(today());const [rows,setRows]=useState<Row[]>([]);const [days,setDays]=useState<Day[]>([]);
+ const [source,setSource]=useState('all');const [status,setStatus]=useState('active');const [branch,setBranch]=useState('all');const [search,setSearch]=useState('');
+ const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [manualOpen,setManualOpen]=useState(false);const [manual,setManual]=useState<ManualDelivery>(initialManual);const [manualBranch,setManualBranch]=useState(ctx.branchId);
+ const [target,setTarget]=useState<SmartTarget|null>(null);const [history,setHistory]=useState<{row:Row;events:Event[]}|null>(null);const [historyBusy,setHistoryBusy]=useState(false);
+ const [cepBusy,setCepBusy]=useState(false);
+ const from=mode==='day'?anchor:mode==='week'?weekStart(anchor):monthStart(anchor);
+ const to=mode==='day'?anchor:mode==='week'?addDays(from,6):monthEnd(anchor);
+ const dates=useMemo(()=>{const result:string[]=[];for(let d=from;d<=to;d=addDays(d,1))result.push(d);return result},[from,to]);
+ const branches=ctx.branches.filter(b=>b.company_id===ctx.companyId&&b.active);
+ const manageable=branches.filter(b=>scopedLogistics(ctx,ctx.companyId,b.id));
+ useEffect(()=>{let alive=true;setBusy(true);setError('');void ctx.db.rpc('sgi_smart_agenda',{p_company:ctx.companyId,p_from:from,p_to:to}).then(({data,error:err})=>{
+  if(!alive)return;setBusy(false);if(err){setError(err.message);setRows([]);setDays([]);return;}setRows(data?.rows??[]);setDays(data?.days??[]);
+ }).catch(()=>{if(alive){setBusy(false);setError('Não foi possível consultar a agenda.')}});return()=>{alive=false}},[ctx.companyId,from,to,revision]);
+ const filtered=rows.filter(r=>(source==='all'||(source==='manual')===r.is_manual)&&(branch==='all'||branch===r.branch_id)&&(status==='all'||(status==='active'?activeStatuses.includes(r.status):r.status===status))&&(!search.trim()||[r.reference,r.customer,r.seller,r.products,r.city,r.neighborhood].join(' ').toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR'))));
+ const daily=filtered.filter(r=>r.delivery_date===selectedDay);
+ const dailyCaps=days.filter(d=>d.delivery_date===selectedDay);
+ const move=(n:number)=>{let next;if(mode==='month'){const d=new Date(monthStart(anchor)+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);next=d.toISOString().slice(0,10)}else next=addDays(anchor,n*(mode==='week'?7:1));setAnchor(next);setSelectedDay(next)};
+ const changeMode=(m:'day'|'week'|'month')=>{setMode(m);setAnchor(selectedDay)};
+ const patch=(key:keyof ManualDelivery,value:string|boolean)=>setManual(old=>({...old,[key]:value}));
+ const lookupCep=async()=>{const cep=digits(manual.cep);if(cep.length!==8)return;setCepBusy(true);
+  try{const r=await fetch('https://viacep.com.br/ws/'+cep+'/json/',{signal:AbortSignal.timeout(6500)});const data=await r.json();if(!r.ok||data.erro){ctx.notify('CEP não localizado. Preencha o endereço manualmente.','error');return;}setManual(old=>digits(old.cep)===cep?{...old,city:data.localidade||old.city,neighborhood:data.bairro||old.neighborhood,street:data.logradouro||old.street}:old);}
+  catch{ctx.notify('Consulta de CEP indisponível. Preencha manualmente.','error');}finally{setCepBusy(false)}
+ };
+ const closeTarget=()=>setTarget(null);
+ const saved=()=>{setTarget(null);setManualOpen(false);setManual(initialManual());onChange()};
+ const manualSubmit=(e:React.FormEvent)=>{e.preventDefault();if(!manual.released||!manageable.some(b=>b.id===manualBranch)||!manual.reference.trim()||manual.customer.trim().length<2||manual.seller.trim().length<2||manual.products.trim().length<2||manual.city.trim().length<2||manual.neighborhood.trim().length<2)return;
+  if(digits(manual.cep).length!==0&&digits(manual.cep).length!==8){ctx.notify('Informe um CEP de oito dígitos ou deixe vazio.','error');return;}
+  setTarget({company:ctx.companyId,branch:manualBranch,manual:{...manual},city:manual.city,neighborhood:manual.neighborhood,cep:manual.cep});
+ };
+ const reschedule=(r:Row)=>{setManualOpen(false);setHistory(null);setTarget({company:r.company_id,branch:r.branch_id,order:r.order_id,booking:r.id,originalDate:r.delivery_date,pool:r.pool_id,city:r.city,neighborhood:r.neighborhood,cep:r.cep})};
+ const cancel=async(r:Row)=>{const reason=window.prompt('Motivo do cancelamento do agendamento (o pedido não será cancelado):')?.trim();if(!reason||reason.length<5)return;if(!window.confirm('Liberar a vaga e cancelar somente o agendamento?'))return;
+  const {error:err}=await ctx.db.rpc('sgi_cancel_booking',{p_booking:r.id,p_reason:reason.slice(0,500)});if(err){ctx.notify(err.message,'error');return;}ctx.notify('Agendamento cancelado. Histórico preservado.');onChange();
+ };
+ const showHistory=async(r:Row)=>{setHistoryBusy(true);setHistory({row:r,events:[]});const {data,error:err}=await ctx.db.rpc('sgi_smart_history',{p_booking:r.id});setHistoryBusy(false);if(err){ctx.notify(err.message,'error');return;}setHistory(h=>h?.row.id===r.id?{row:r,events:data??[]}:h)};
+ const print=()=>{const win=window.open('','_blank','width=1000,height=750');if(!win){ctx.notify('Permita abrir a janela de impressão.','error');return;}const e=escapeHtml;win.document.write('<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Agenda logística</title><style>body{font:14px Arial;padding:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;text-align:left;padding:8px;vertical-align:top}th{background:#eee}small{color:#555}@media print{button{display:none}}</style><h1>Móveis &amp; Cia — Agenda de entregas</h1><p>'+e(dateBR(selectedDay))+' · '+daily.length+' agendamento(s) · Lista operacional (não é romaneio de carga)</p><table><thead><tr><th>Pedido / Loja</th><th>Cliente / telefone</th><th>Vendedor / produtos</th><th>Destino</th><th>Situação</th></tr></thead><tbody>'+daily.map(r=>'<tr><td>'+e((r.is_manual?'Talão ':'SGI #')+r.reference)+'<br>'+e(r.branch_name)+'</td><td>'+e(r.customer)+'<br>'+e(r.phone)+'</td><td>'+e(r.seller)+'<br>'+e(r.products)+'</td><td>'+e(r.street)+' '+e(r.street_number)+'<br>'+e(r.neighborhood)+' / '+e(r.city)+'</td><td>'+e(({scheduled:'Agendada',loaded:'Carregada',in_route:'Em rota',delivered:'Entregue',failed:'Ocorrência',cancelled:'Cancelada'} as Record<string,string>)[r.status]??r.status)+'</td></tr>').join('')+'</tbody></table><script>window.onload=function(){window.print()}</script></html>');win.document.close()};
+ return <div className="smart-agenda">
+  <Panel title="Agenda inteligente de entregas" sub="Uma agenda para pedidos digitais e talões, com vagas compartilhadas e histórico.">
+   <div className="toolbar smart-agenda-toolbar"><div className="action-pair"><button className="btn secondary small" onClick={()=>move(-1)} aria-label="Período anterior"><ChevronLeft size={17}/></button><button className="btn secondary small" onClick={()=>{setAnchor(today());setSelectedDay(today())}}>Hoje</button><button className="btn secondary small" onClick={()=>move(1)} aria-label="Próximo período"><ChevronRight size={17}/></button></div><strong>{dateBR(from)}{from!==to?' — '+dateBR(to):''}</strong><div className="action-pair">{(['day','week','month'] as const).map(m=><button key={m} className={'btn small '+(mode===m?'primary':'secondary')} onClick={()=>changeMode(m)}>{m==='day'?'Dia':m==='week'?'Semana':'Mês'}</button>)}</div>{manageable.length>0&&<button className="btn primary" onClick={()=>{setTarget(null);setHistory(null);setManualOpen(v=>!v);setManualBranch(manageable.some(b=>b.id===ctx.branchId)?ctx.branchId:manageable[0].id)}}><Plus size={17}/> Entrega avulsa</button>}</div>
+   {error&&<ErrorBox text={error}/>}
+   <div className="smart-calendar" style={{gridTemplateColumns:mode==='day'?'1fr':'repeat(7,minmax(0,1fr))'}}>
+    {mode==='month'&&Array.from({length:(new Date(from+'T12:00:00Z').getUTCDay()+6)%7},(_,i)=><div key={'blank'+i}/>)}
+    {dates.map(d=>{const items=rows.filter(r=>r.delivery_date===d&&activeStatuses.includes(r.status));const caps=days.filter(x=>x.delivery_date===d&&x.active);const locations=[...new Set(items.map(r=>r.neighborhood).filter(Boolean))];return <button type="button" key={d} onClick={()=>setSelectedDay(d)} className={'smart-day '+(d===selectedDay?'chosen':'')}><small>{new Date(d+'T12:00:00Z').toLocaleDateString('pt-BR',{weekday:'short',timeZone:'UTC'})}</small><strong>{d.slice(8,10)}</strong><span>{items.length} entrega(s)</span>{caps.length>0&&<><span className="smart-cap">{caps.reduce((s,x)=>s+x.used,0)}/{caps.reduce((s,x)=>s+x.capacity,0)} vagas da central</span><div className="smart-progress"><i style={{width:Math.min(100,100*caps.reduce((s,x)=>s+x.used,0)/caps.reduce((s,x)=>s+x.capacity,0))+'%'}}/></div></>}{locations.length>0&&<small title={locations.join(', ')}>{locations.slice(0,2).join(', ')}{locations.length>2?' +'+(locations.length-2):''}</small>}</button>})}
+   </div>
+   <div className="toolbar smart-agenda-filters"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar pedido, cliente, vendedor, produto ou bairro"/><select value={source} onChange={e=>setSource(e.target.value)}><option value="all">Todas as origens</option><option value="digital">Pedidos digitais</option><option value="manual">Talões / avulsas</option></select><select value={branch} onChange={e=>setBranch(e.target.value)}><option value="all">Todas as lojas autorizadas</option>{branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select><select value={status} onChange={e=>setStatus(e.target.value)}><option value="active">Em operação</option><option value="all">Todas as situações</option><option value="scheduled">Agendadas</option><option value="delivered">Entregues</option><option value="failed">Ocorrências</option><option value="cancelled">Canceladas</option></select></div>
+   <div className="toolbar"><div><strong>{dateBR(selectedDay)}</strong> · {daily.length} registro(s) {dailyCaps.map(d=><small key={d.pool_id} className="tiny-muted"> · {d.pool_name}: {d.used}/{d.capacity} paradas</small>)}</div><button className="btn secondary small" disabled={!daily.length} onClick={print}><Printer size={15}/> Imprimir agenda do dia</button></div>
+   <div className="table-scroll"><table><thead><tr><th>Pedido / origem</th><th>Cliente</th><th>Vendedor / produtos</th><th>Destino</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{daily.map(r=><tr key={r.id}><td><strong>{r.is_manual?'Talão ':'#'}{r.is_manual?r.reference:r.reference.padStart(6,'0')}</strong><small>{r.branch_name} · {r.pool_name}</small><small>{r.is_manual?'Avulsa':'Digital'}</small></td><td><strong>{r.customer}</strong><small>{r.phone}</small></td><td><strong>{r.seller}</strong><small>{r.products}</small></td><td><strong>{r.neighborhood} / {r.city}</strong><small>{r.street} {r.street_number} · {formatCep(r.cep)}</small>{r.notes&&<small>{r.notes}</small>}</td><td><Status value={r.status}/><small>{r.service_type==='assembly'?'Montagem':'Entrega'}</small>{r.delivery_notes&&<small>{r.delivery_notes}</small>}</td><td><div className="action-pair">{r.order_id&&<button className="btn secondary small" onClick={()=>ctx.go('order-detail',r.order_id!)}>Pedido</button>}<button className="btn secondary small" onClick={()=>void showHistory(r)}>Histórico</button>{r.status==='scheduled'&&r.can_manage&&<><button className="btn secondary small" onClick={()=>reschedule(r)}>Remarcar</button><button className="btn danger small" onClick={()=>void cancel(r)}>Cancelar</button></>}</div></td></tr>)}</tbody></table></div>
+   {busy?<p role="status">Consultando agenda...</p>:!daily.length&&<Empty title="Nenhuma entrega neste dia" description="Selecione outra data, ajuste os filtros ou agende um pedido."/>}
+  </Panel>
+  {manualOpen&&!target&&<Panel title="Nova entrega avulsa" sub="Registre um pedido do talão sem lançar venda, cliente ou recebimento fictício." action={<button className="btn secondary small" onClick={()=>setManualOpen(false)}>Fechar</button>}>
+   <form className="form-grid cols3" onSubmit={manualSubmit}>
+    <Field label="Loja de origem"><select required value={manualBranch} onChange={e=>setManualBranch(e.target.value)}>{manageable.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
+    <Field label="Número do talão / pedido *"><input required maxLength={80} value={manual.reference} onChange={e=>patch('reference',e.target.value)}/></Field>
+    <Field label="Nome do cliente *"><input required maxLength={150} value={manual.customer} onChange={e=>patch('customer',e.target.value)}/></Field>
+    <Field label="Vendedor *"><input required maxLength={120} value={manual.seller} onChange={e=>patch('seller',e.target.value)}/></Field>
+    <Field label="Telefone"><input maxLength={40} value={manual.phone} onChange={e=>patch('phone',e.target.value)}/></Field>
+    <Field label="CEP (opcional)"><div className="action-pair"><input value={formatCep(manual.cep)} onChange={e=>patch('cep',digits(e.target.value).slice(0,8))}/><button type="button" className="btn secondary small" disabled={cepBusy||digits(manual.cep).length!==8} onClick={()=>void lookupCep()}>{cepBusy?'Consultando...':'Buscar'}</button></div></Field>
+    <Field label="Cidade *"><input required maxLength={100} value={manual.city} onChange={e=>patch('city',e.target.value)}/></Field>
+    <Field label="Bairro *"><input required maxLength={100} value={manual.neighborhood} onChange={e=>patch('neighborhood',e.target.value)}/></Field>
+    <Field label="Rua"><input maxLength={180} value={manual.street} onChange={e=>patch('street',e.target.value)}/></Field>
+    <Field label="Número / complemento"><input maxLength={40} value={manual.number} onChange={e=>patch('number',e.target.value)}/></Field>
+    <div className="smart-wide"><Field label="Produtos, quantidades e medidas *"><textarea required rows={3} maxLength={3000} value={manual.products} onChange={e=>patch('products',e.target.value)} placeholder="Ex.: 1 sofá 2,20 m; 1 mesa com 6 cadeiras"/></Field></div>
+    <div className="smart-wide"><Field label="Observações de entrega"><textarea rows={2} maxLength={1000} value={manual.notes} onChange={e=>patch('notes',e.target.value)}/></Field></div>
+    <label className="checkbox-bar smart-wide"><input type="checkbox" required checked={manual.released} onChange={e=>patch('released',e.target.checked)}/> Conferi no talão o pagamento/liberação financeira e a disponibilidade de todos os produtos.</label>
+    <div className="smart-wide panel-footer"><button className="btn primary" type="submit" disabled={!manual.released}><Route size={17}/> Consultar melhores datas</button></div>
+   </form>
+  </Panel>}
+  {target&&<SmartBooking ctx={ctx} target={target} onSaved={saved} onClose={closeTarget}/>}
+  {history&&<Panel title={'Histórico · '+history.row.reference} sub="Eventos auditados, sem sobrescrever a data anterior." action={<button className="btn secondary small" onClick={()=>setHistory(null)}>Fechar</button>}>
+   {historyBusy?<p>Carregando histórico...</p>:history.events.length?history.events.map((e,i)=><div className="smart-history" key={i}><strong>{eventNames[e.action]??e.action}</strong><small>{dateTimeBR(e.created_at)} · {e.actor}</small><p>{e.old_date&&e.new_date?dateBR(e.old_date)+' → '+dateBR(e.new_date):e.new_date||e.booked_date?'Data: '+dateBR(e.new_date||e.booked_date):''}{e.reason?' · '+e.reason:''}</p></div>):<Empty title="Nenhum evento registrado"/>}
+  </Panel>}
+ </div>;
+}
