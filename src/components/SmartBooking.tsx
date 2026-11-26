@@ -8,7 +8,7 @@ import {Field,Panel,ErrorBox} from './UI';
 export type ManualDelivery={reference:string;customer:string;seller:string;products:string;city:string;neighborhood:string;cep:string;street:string;number:string;phone:string;notes:string;released:boolean};
 export type SmartTarget={company:string;branch:string;order?:string|null;manual?:ManualDelivery;booking?:string;originalDate?:string;pool?:string;city:string;neighborhood:string;cep?:string};
 type Suggestion={id:string;pool_id:string;pool_name:string;delivery_date:string;capacity:number;used:number;signal:string;nearest_km:number|null;same_neighborhood:number;same_city:number;geo_count:number};
-const signalNames:Record<string,string>={same_neighborhood:'Mesmo bairro',nearby:'CEP próximo',moderate:'Proximidade moderada',same_city:'Mesma cidade (sem distância validada)',empty:'Rota sem entregas',far:'Destino distante',unknown:'Proximidade não determinada'};
+const signalNames:Record<string,string>={same_neighborhood:'Mesmo bairro',nearby:'CEP próximo',moderate:'Proximidade moderada',same_region:'Mesma região cadastrada',same_city:'Mesma cidade (sem distância validada)',empty:'Rota sem entregas',far:'Destino distante',unknown:'Proximidade não determinada'};
 export const scopedLogistics=(ctx:AppContext,company:string,branch:string)=>ctx.memberships.some(m=>m.active&&m.tenant_id===ctx.tenantId&&(!m.company_id||m.company_id===company)&&(!m.branch_id||m.branch_id===branch)&&['tenant_admin','company_admin','manager','shipping'].includes(m.role));
 const addDays=(date:string,n:number)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 export {addDays};
@@ -71,7 +71,7 @@ export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target
   <div className="toolbar"><span className="tiny-muted">Datas abertas e vagas reais · próximos 45 dias</span><button type="button" className="btn secondary small" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={14}/> Recalcular</button></div>
   {loading?<p role="status">Calculando os melhores encaixes...</p>:<>
    <div className="smart-options">{options.map((s,i)=><button type="button" key={s.id} disabled={busy} className={'smart-option '+(!openNew&&chosen?.id===s.id?'chosen':'')} onClick={()=>{setOpenNew(false);setChosen(s);setConfirmed(false);}}>
-    <div><strong>{dateBR(s.delivery_date)} · {s.pool_name}</strong><small>{signalNames[s.signal]??s.signal}{i===0&&['same_neighborhood','nearby','moderate'].includes(s.signal)?' · Melhor encaixe disponível':''}</small></div>
+    <div><strong>{dateBR(s.delivery_date)} · {s.pool_name}</strong><small>{signalNames[s.signal]??s.signal}{i===0&&['same_neighborhood','nearby','moderate','same_region'].includes(s.signal)?' · Melhor encaixe disponível':''}</small></div>
     <div><strong>{s.used}/{s.capacity}</strong><small>{s.capacity-s.used} vaga(s)</small></div>
     <div><strong>{s.nearest_km==null?'—':Number(s.nearest_km).toFixed(1).replace('.',',')+' km'}</strong><small>CEP mais próximo, linha reta</small></div>
    </button>)}</div>
