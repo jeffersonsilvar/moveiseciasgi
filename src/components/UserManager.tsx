@@ -3,7 +3,7 @@ import {RefreshCw,ShieldCheck,UserRoundCheck,UserRoundX} from 'lucide-react';
 import type {AppContext} from '../lib/types';
 import {Panel} from './UI';
 type Person={membership_id:string;user_id:string;email:string;display_name:string;company_id:string|null;branch_id:string|null;role:string;active:boolean;movement_count:number};
-const roleNames:Record<string,string>={tenant_admin:'Master',company_admin:'Admin da empresa',manager:'Gerente',seller:'Vendedor',shipping:'Expedição',finance:'Financeiro',production:'Fabricação',viewer:'Consulta'};
+const roleNames:Record<string,string>={tenant_admin:'Master',company_admin:'Admin da empresa',manager:'Gerente',seller:'Vendedor',cashier:'Caixa — Emissão de pedidos',shipping:'Expedição',finance:'Financeiro',production:'Fabricação',viewer:'Consulta'};
 export function UserManager({ctx}:{ctx:AppContext}){
  const [users,setUsers]=useState<Person[]>([]);const [busy,setBusy]=useState(false);const [version,setVersion]=useState(0);const [err,setErr]=useState('');
  useEffect(()=>{let live=true;void ctx.db.rpc('sgi_admin_list_users',{p_tenant:ctx.tenantId}).then(({data,error})=>{
@@ -13,7 +13,7 @@ export function UserManager({ctx}:{ctx:AppContext}){
   let name:string|null=null;let role:string|null=null;
   if(type==='rename'){name=prompt('Nome de exibição do usuário:',user.display_name);if(!name||name.trim().length<2)return;}
   if(type==='change_role'){
-   role=prompt('Novo perfil (seller, manager, finance, shipping, production, viewer, company_admin):',user.role);
+   role=prompt('Novo perfil (cashier, seller, manager, finance, shipping, production, viewer, company_admin):',user.role);
    if(!role||!roleNames[role])return;
   }
   if(type==='deactivate'&&!confirm(`Inativar o acesso de ${user.display_name}?`))return;
