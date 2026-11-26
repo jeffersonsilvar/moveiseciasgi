@@ -13,8 +13,8 @@ export const scopedLogistics=(ctx:AppContext,company:string,branch:string)=>ctx.
 const addDays=(date:string,n:number)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 export {addDays};
 
-export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void}){
- const canOpen=scopedLogistics(ctx,target.company,target.branch);
+export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void;previewOnly?:boolean}){
+ const canOpen=!previewOnly&&scopedLogistics(ctx,target.company,target.branch);
  const [pools,setPools]=useState<{id:string;name:string}[]>([]);
  const [options,setOptions]=useState<Suggestion[]>([]);
  const [chosen,setChosen]=useState<Suggestion|null>(null);
@@ -55,7 +55,7 @@ export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target
  },[target.company,target.branch,target.order,target.booking,target.cep,target.city,target.neighborhood,refresh]);
  const selectedDate=openNew?date:chosen?.delivery_date;
  const selectedPool=openNew?pool:chosen?.pool_id;
- const valid=!!selectedDate&&!!selectedPool&&confirmed&&(!openNew||(canOpen&&Number.isInteger(Number(capacity))&&Number(capacity)>=1&&Number(capacity)<=100))&&(!target.booking||reason.trim().length>=5);
+ const valid=!previewOnly&&!!selectedDate&&!!selectedPool&&confirmed&&(!openNew||(canOpen&&Number.isInteger(Number(capacity))&&Number(capacity)>=1&&Number(capacity)<=100))&&(!target.booking||reason.trim().length>=5);
  const save=async()=>{
   if(busy||loading||!valid)return;
   setBusy(true);setError('');
@@ -67,6 +67,7 @@ export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target
  };
  return <Panel title={target.booking?'Remarcar entrega':'Assistente de agendamento'} sub="A mesma inteligência para pedidos digitais e entregas avulsas." action={onClose&&<button type="button" className="btn secondary small" disabled={busy} onClick={onClose}>Fechar</button>}>
   <div className="subtle-info"><MapPin size={18}/><div><strong>{target.manual&&('Talão '+target.manual.reference+' · '+target.manual.customer+' — ')}{target.neighborhood} · {target.city}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
+  {previewOnly&&<div className="subtle-warning">Planejamento preliminar: o pedido ainda tem bloqueio de liberação. As datas são apenas referências e não podem ser prometidas ou reservadas.</div>}
   {error&&<ErrorBox text={error}/>}
   <div className="toolbar"><span className="tiny-muted">Datas abertas e vagas reais · próximos 45 dias</span><button type="button" className="btn secondary small" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={14}/> Recalcular</button></div>
   {loading?<p role="status">Calculando os melhores encaixes...</p>:<>
@@ -84,8 +85,8 @@ export function SmartBooking({ctx,target,onSaved,onClose}:{ctx:AppContext;target
     <div className="subtle-warning smart-wide">Confirme a disponibilidade da frota e dos motoristas. O limite é compartilhado por toda a central; se a data já existir, sua capacidade original permanece.</div>
    </div>}
    {target.booking&&<Field label="Motivo da remarcação"><textarea rows={2} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe por que a data foi alterada"/></Field>}
-   {(openNew||chosen)&&<label className="checkbox-bar"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Confirmo a data selecionada e a disponibilidade operacional; o cliente está ciente.</label>}
-   <div className="panel-footer"><button type="button" className="btn primary" disabled={!valid||busy} onClick={()=>void save()}><CalendarCheck size={17}/> {busy?'Reservando...':target.booking?'Confirmar remarcação':'Confirmar agendamento'}</button></div>
+   {!previewOnly&&(openNew||chosen)&&<label className="checkbox-bar"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Confirmo a data selecionada e a disponibilidade operacional; o cliente está ciente.</label>}
+   {!previewOnly&&<div className="panel-footer"><button type="button" className="btn primary" disabled={!valid||busy} onClick={()=>void save()}><CalendarCheck size={17}/> {busy?'Reservando...':target.booking?'Confirmar remarcação':'Confirmar agendamento'}</button></div>}
    <p className="tiny-muted">Sugestões não são reservas. O banco valida capacidade e liberação novamente no momento da confirmação. Distâncias não representam trajetos por ruas.</p>
   </>}
  </Panel>;
