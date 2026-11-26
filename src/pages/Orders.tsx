@@ -3,7 +3,7 @@ import {ArrowLeft,ArrowRight,CalendarClock,CheckCircle2,CreditCard,FileText,Lock
 import type {AppContext,Booking,Order,Receivable} from '../lib/types';
 import {dateBR,dateTimeBR,formatCpfCnpj,formatPhone,money,statusLabel,titleCaseBR} from '../lib/utils';
 import {printCommercialOrder} from '../lib/orderPrint';
-import {Empty,ErrorBox,PageHead,Pager,Panel,SearchBox,Status} from '../components/UI';
+import {Empty,ErrorBox,Field,PageHead,Pager,Panel,SearchBox,Status} from '../components/UI';
 const cols='id,tenant_id,order_number,company_id,branch_id,customer_id,seller_user_id,commercial_seller_id,delivery_lead_business_days,created_by,commercial_status,financial_status,fulfillment_type,availability_status,products_gross,products_discount,freight,assembly,grand_total,received_total,due_date,created_at,updated_at,notes,customer_snapshot,delivery_address_snapshot,financial_override_at,financial_override_reason,deleted_at';
 export function Orders({ctx}:{ctx:AppContext}){
  const [orders,setOrders]=useState<Order[]>([]);const [page,setPage]=useState(0);const [total,setTotal]=useState(0);const [search,setSearch]=useState('');const [status,setStatus]=useState('all');const [busy,setBusy]=useState(false);const [version,setVersion]=useState(0);
