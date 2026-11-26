@@ -1,3 +1,4 @@
+import './smart-agenda.css';
 import {useEffect,useState} from 'react';
 import {CalendarCheck,CalendarPlus,MapPin,Route,RefreshCw} from 'lucide-react';
 import type {AppContext} from '../lib/types';
