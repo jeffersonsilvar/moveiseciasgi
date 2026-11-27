@@ -27,7 +27,10 @@ export function formatPhone(value:string|null|undefined){
  return ddd+number.slice(0,mid)+(number.length>mid?'-'+number.slice(mid):'');
 }
 /** Capitalização de nomes e textos, sem alterar e-mails, CPF, SKU ou números. */
+let textFormattingEnabled=true;
+export const setTextFormatting=(enabled:boolean)=>{textFormattingEnabled=enabled};
 export function titleCaseBR(value:string|null|undefined):string{
+ if(!textFormattingEnabled)return String(value??'');
  const small=new Set(['da','de','do','das','dos','e','em','na','no','nas','nos','para','por']);
  const acronyms=new Set(['ltda','eireli','mei','me','mdf','mdp','pvc','led','usb','cpf','cnpj','sku']);
  let first=true;
@@ -51,6 +54,7 @@ export function friendlyDatabaseError(e:unknown){
 
 /** Frases e observações: capitaliza a primeira letra após ponto, !, ? ou quebra de linha. */
 export function sentenceCaseBR(value:string|null|undefined):string{
+ if(!textFormattingEnabled)return String(value??'');
  const acronyms=new Set(['cpf','cnpj','cep','mdf','mdp','led','pvc','pix','sku','d33']);
  const normalized=String(value??'').trim().replace(/[ \t]+/g,' ').toLocaleLowerCase('pt-BR');
  let sentenceStart=true;
