@@ -1,3 +1,5 @@
+import {useEffect,useRef} from 'react';
+import './operation-drawer.css';
 import {AlertCircle,CheckCircle2,Search,PackageOpen} from 'lucide-react';
 import type {ReactNode} from 'react';
 import {statusLabel} from '../lib/utils';
@@ -10,3 +12,13 @@ export function ErrorBox({text}:{text:string}){return <div className="form-error
 export function SuccessBox({text}:{text:string}){return <div className="form-success" role="status"><CheckCircle2 size={16}/>{text}</div>}
 export function Pager({page,total,size=10,onChange}:{page:number;total:number;size?:number;onChange:(v:number)=>void}){const pages=Math.max(1,Math.ceil(total/size));return <div className="pager"><span>{total} registro(s) · Página {page+1} de {pages}</span><div><button className="btn secondary" disabled={page<=0} onClick={()=>onChange(page-1)}>Anterior</button><button className="btn secondary" disabled={page>=pages-1} onClick={()=>onChange(page+1)}>Próxima</button></div></div>}
 export function SearchBox({value,onChange,placeholder='Pesquisar...'}:{value:string;onChange:(v:string)=>void;placeholder?:string}){return <div className="search-box"><Search size={17}/><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></div>}
+
+/** Native modal keeps keyboard focus inside and leaves the underlying page in place. */
+export function OperationDrawer({title,step,children,onEscape}:{title:string;step?:string;children:ReactNode;onEscape?:()=>void}){
+ const ref=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{const dialog=ref.current;if(!dialog)return;const previous=document.activeElement as HTMLElement|null;const overflow=document.body.style.overflow;dialog.showModal();document.body.style.overflow='hidden';return()=>{if(dialog.open)dialog.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus({preventScroll:true});};},[]);
+ return <dialog ref={ref} className="operation-drawer" aria-label={title} onCancel={e=>{e.preventDefault();onEscape?.()}}>
+ <div className="operation-drawer-head"><strong>{title}</strong>{step&&<small>{step}</small>}</div>
+ <div className="operation-drawer-content">{children}</div>
+ </dialog>;
+}
