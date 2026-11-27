@@ -9,11 +9,12 @@ import {userAdmin,strongPassword,passwordHint} from '../lib/userAdmin';
 type Region={id:string;tenant_id:string;name:string;active:boolean};
 type Pool={id:string;name:string};
 type Slot={id:string;pool_id:string;region_id:string;delivery_date:string;capacity:number;reserved:number;active:boolean};
-type SettingsSection='users'|'organization'|'commercial'|'zones'|'capacity'|'fleet'|'logistics';
+type SettingsSection='users'|'organization'|'commercial'|'zones'|'capacity'|'fleet'|'logistics'|'formatting';
 const settingsSections=[
  {id:'users',title:'Usuários e acessos',summary:'Perfis e permissões',description:'Gerencie quem pode acessar o SGI e quais atividades cada usuário pode executar.',icon:Users},
  {id:'organization',title:'Empresas e lojas',summary:'Estrutura do grupo',description:'Cadastre empresas e vincule as unidades de atendimento à empresa correta.',icon:Building2},
  {id:'commercial',title:'Política comercial',summary:'Descontos e regras',description:'Defina os limites comerciais aplicados às vendas da empresa selecionada.',icon:Percent},
+ {id:'formatting',title:'Padronização de textos',summary:'Nomes e descrições',description:'Controle a formatação automática dos textos comerciais e logísticos do grupo.',icon:ShieldCheck},
  {id:'logistics',title:'Parâmetros logísticos',summary:'Regras da operação',description:'Ative ou desative exigências de frota e motorista conforme a maturidade da operação.',icon:ShieldCheck},
  {id:'zones',title:'Zonas de entrega',summary:'Regiões e bairros',description:'Organize as áreas atendidas pela expedição e vincule bairros às regiões.',icon:MapPin},
  {id:'capacity',title:'Capacidade de entrega',summary:'Datas e vagas',description:'Configure a disponibilidade de atendimento por data, região e central logística.',icon:CalendarDays},
@@ -31,6 +32,9 @@ const profileHelp:Record<string,string>={
  tenant_admin:'Master: administração do grupo, inclusive usuários e acessos. Conceda somente a pessoas autorizadas.'
 };
 export function Settings({ctx}:{ctx:AppContext}){
+ const [textPref,setTextPref]=useState<boolean|null>(null);const [textError,setTextError]=useState('');const [textBusy,setTextBusy]=useState(false);
+ useEffect(()=>{let live=true;void Promise.resolve(ctx.db.rpc('sgi_get_text_preference',{p_tenant:ctx.tenantId})).then(({data,error})=>{if(live){setTextPref(error?null:data===true);setTextError(error?.message??'')}});return()=>{live=false}},[ctx.tenantId]);
+ const saveTextPref=async()=>{if(textPref===null||textBusy)return;setTextBusy(true);setTextError('');try{const {error}=await ctx.db.rpc('sgi_set_text_preference',{p_tenant:ctx.tenantId,p_enabled:textPref});if(error){setTextError(error.message);return;}ctx.notify('Preferência de textos salva.');ctx.refresh();}finally{setTextBusy(false)}};
  const [section,setSection]=useState<SettingsSection>('users');
  const [branchCompany,setBranchCompany]=useState(ctx.companyId);
  const [companyName,setCompanyName]=useState('');const [trade,setTrade]=useState('');const [cnpj,setCnpj]=useState('');const [branchName,setBranchName]=useState('');const [userEmail,setUserEmail]=useState('');const [userRole,setUserRole]=useState('cashier');const [userCompany,setUserCompany]=useState(ctx.companyId);const [userBranch,setUserBranch]=useState(ctx.branchId);
@@ -86,6 +90,7 @@ export function Settings({ctx}:{ctx:AppContext}){
    <div hidden={section!=='commercial'} className="settings-section-body settings-policy-section">
     <Panel title="Política comercial" sub="Limite máximo de desconto para vendedores. Exceções dependem de autorização gerencial."><div className="form-stack"><Field label="Limite percentual do vendedor (%)"><input type="number" min="0" max="100" step="0.5" value={sellerPct} onChange={e=>setSellerPct(e.target.value)}/></Field><label className="checkbox-bar"><input type="checkbox" checked={requireReview} onChange={e=>setRequireReview(e.target.checked)}/> Revisão financeira (configuração preparatória)</label><button className="btn secondary" disabled={busy} onClick={()=>invoke('sgi_set_sales_policy',{p_company:ctx.companyId,p_pct:Number(sellerPct),p_review:requireReview},'Limite comercial salvo e auditado.')}><ShieldCheck size={16}/> Salvar política</button><p className="tiny-muted">Para campanhas específicas (ex.: 20% somente em sofás/poltronas), mantenha o limite geral conservador até configurar a tabela de campanhas por categoria.</p></div></Panel>
    </div>
+   {section==='formatting'&&<div className="settings-section-body"><Panel title="Formatação automática" sub="Parâmetro compartilhado pelo grupo."><label className="checkbox-bar"><input type="checkbox" disabled={textPref===null||textBusy} checked={textPref===true} onChange={e=>setTextPref(e.target.checked)}/> Padronizar nomes, endereços e descrições</label><p>Exemplo: eudete gonçalves ferreira → Eudete Gonçalves Ferreira; pau amarelo → Pau Amarelo. Observações seguem a capitalização de frases. CPF, CEP, telefones, SKU e códigos não são convertidos em nomes.</p><p>Não reescreve registros históricos. Ao desativar, novas entradas conservam a grafia informada, exceto máscaras e validações técnicas.</p>{textError&&<div role="alert">{textError}</div>}<div className="panel-footer"><button className="btn primary" disabled={textPref===null||textBusy} onClick={()=>void saveTextPref()}>Salvar preferência</button></div></Panel></div>}
    {section==='logistics'&&<div className="settings-section-body"><LogisticsPolicySettings ctx={ctx}/></div>}
    <div hidden={section!=='zones'} className="settings-section-body">
     {section==='zones'&&<RegionsManager ctx={ctx} onChange={()=>setVersion(v=>v+1)}/>}
