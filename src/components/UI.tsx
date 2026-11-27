@@ -17,6 +17,7 @@ export function SearchBox({value,onChange,placeholder='Pesquisar...'}:{value:str
 export function OperationDrawer({title,step,children,onEscape}:{title:string;step?:string;children:ReactNode;onEscape?:()=>void}){
  const ref=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const dialog=ref.current;if(!dialog)return;const previous=document.activeElement as HTMLElement|null;const overflow=document.body.style.overflow;dialog.showModal();document.body.style.overflow='hidden';return()=>{if(dialog.open)dialog.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus({preventScroll:true});};},[]);
+ useEffect(()=>{ref.current?.querySelector('.operation-drawer-content')?.scrollTo({top:0});},[step]);
  return <dialog ref={ref} className="operation-drawer" aria-label={title} onCancel={e=>{e.preventDefault();onEscape?.()}}>
  <div className="operation-drawer-head"><strong>{title}</strong>{step&&<small>{step}</small>}</div>
  <div className="operation-drawer-content">{children}</div>
