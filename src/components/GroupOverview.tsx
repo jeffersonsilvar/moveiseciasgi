@@ -1,0 +1,12 @@
+import {useEffect,useState} from 'react';
+import type {SupabaseClient} from '@supabase/supabase-js';
+import {money,titleCaseBR} from '../lib/utils';
+import {Panel,PageHead,ErrorBox} from './UI';
+type Summary={id:string;trade_name:string;orders:number;net:number;receivable:number;deliveries:number};
+export function GroupOverview({db,tenant,onCompany}:{db:SupabaseClient;tenant:string;onCompany:(id:string)=>void}){
+ const [rows,setRows]=useState<Summary[]>([]);const [error,setError]=useState('');const [busy,setBusy]=useState(true);const [revision,setRevision]=useState(0);
+ useEffect(()=>{let live=true;setRows([]);setError('');setBusy(true);void Promise.resolve(db.rpc('sgi_group_overview',{p_tenant:tenant})).then(({data,error})=>{if(!live)return;if(error)setError(error.message);else setRows(data??[])}).catch(()=>{if(live)setError('Não foi possível consultar o grupo.')}).finally(()=>{if(live)setBusy(false)});return()=>{live=false}},[tenant,revision]);
+ const totals=rows.reduce((v,r)=>({orders:v.orders+Number(r.orders),net:v.net+Number(r.net),receivable:v.receivable+Number(r.receivable),deliveries:v.deliveries+Number(r.deliveries)}),{orders:0,net:0,receivable:0,deliveries:0});
+ return <><PageHead title="Visão consolidada do grupo" eyebrow="GESTÃO / MULTIEMPRESA" desc="Todas as empresas ativas deste grupo · consulta gerencial, sem lançamentos."><button className="btn secondary" onClick={()=>setRevision(v=>v+1)}>Atualizar</button></PageHead>{error&&<ErrorBox text={error}/>}
+ {busy?<p>Consultando indicadores...</p>:!error&&<><div className="metric-grid">{[{label:'Vendas líquidas de produtos',value:money(totals.net)},{label:'Pedidos confirmados',value:totals.orders},{label:'Contas a receber',value:money(totals.receivable)},{label:'Entregas em operação',value:totals.deliveries}].map(x=><div className="metric" key={x.label}><span>{x.label}</span><strong>{x.value}</strong><small>Carteira total do grupo</small></div>)}</div><Panel title="Resultado por empresa" sub="Selecione uma empresa para acessar sua operação."><div className="table-scroll"><table><thead><tr><th>Empresa</th><th>Pedidos</th><th>Vendas líquidas</th><th>A receber</th><th>Entregas</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><strong>{titleCaseBR(r.trade_name)}</strong></td><td>{r.orders}</td><td>{money(r.net)}</td><td>{money(r.receivable)}</td><td>{r.deliveries}</td><td><button className="btn secondary small" onClick={()=>onCompany(r.id)}>Acessar empresa</button></td></tr>)}</tbody></table></div></Panel></>}</>;
+}
