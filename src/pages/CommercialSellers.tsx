@@ -28,7 +28,7 @@ export function CommercialSellers({ctx}:{ctx:AppContext}){
   setName('');setBranch('');setEditing(null);setActive(true);
   ctx.notify('Cadastro de vendedor salvo.');void load();
  };
- const select=(s:Seller)=>{setEditing(s.id);setName(s.display_name);setBranch(s.branch_id??'');setActive(s.active)};
+ const select=(s:Seller)=>{setEditing(s.id);setName(titleCaseBR(s.display_name));setBranch(s.branch_id??'');setActive(s.active)};
  const branches=ctx.branches.filter(b=>b.company_id===ctx.companyId);
  return <><PageHead eyebrow="COMERCIAL / CADASTROS" title="Vendedores"
  desc="Equipe comercial independente das contas de login. O caixa seleciona o vendedor no pedido."/>
@@ -44,7 +44,7 @@ export function CommercialSellers({ctx}:{ctx:AppContext}){
    </div>
   </Panel>
   <Panel title="Equipe comercial" sub="Vendedores inativos são preservados no histórico, mas não aparecem em novas vendas.">
-   <div className="item-list">{rows.map(s=><div key={s.id}><strong><Users size={14}/> {s.display_name}</strong><small>{s.branch_id?branches.find(b=>b.id===s.branch_id)?.name??'Outra loja':'Todas as lojas'} · {s.active?'Ativo':'Inativo'}</small>{ctx.canManage&&<button type="button" className="btn secondary small" onClick={()=>select(s)}>Editar</button>}</div>)}</div>
+   <div className="item-list">{rows.map(s=><div key={s.id}><strong><Users size={14}/> {titleCaseBR(s.display_name)}</strong><small>{s.branch_id?branches.find(b=>b.id===s.branch_id)?.name??'Outra loja':'Todas as lojas'} · {s.active?'Ativo':'Inativo'}</small>{ctx.canManage&&<button type="button" className="btn secondary small" onClick={()=>select(s)}>Editar</button>}</div>)}</div>
    {!rows.length&&<p className="tiny-muted">Nenhum vendedor cadastrado. Cadastre os responsáveis pelas vendas para iniciar os testes.</p>}
   </Panel>
  </div></>;
