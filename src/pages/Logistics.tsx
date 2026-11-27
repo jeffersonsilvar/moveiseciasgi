@@ -58,13 +58,20 @@ export function Manifests({ctx}:{ctx:AppContext}){
  const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(false);const [error,setError]=useState('');const [version,setVersion]=useState(0);
  const [manifestFilter,setManifestFilter]=useState('active');const [reversal,setReversal]=useState<{manifest:string;stop?:string;label:string}|null>(null);const [reversalReason,setReversalReason]=useState('');
  const selected=manifests.find(m=>m.id===manifestId);
- useEffect(()=>{let live=true;setError('');void Promise.all([
- ctx.db.from('logistics_pools').select('id,name').eq('tenant_id',ctx.tenantId).eq('active',true),
+ useEffect(()=>{let live=true;setError('');setManifests([]);setPools([]);setPolicy(null);const load=async()=>{
+ const branchIds=ctx.branches.filter(b=>b.company_id===ctx.companyId&&b.active).map(b=>b.id);
+ const links=branchIds.length?await ctx.db.from('logistics_pool_branches').select('pool_id').in('branch_id',branchIds):{data:[],error:null};
+ if(!live)return;
+ if(links.error){setError(links.error.message);return;}
+ const poolIds=[...new Set((links.data??[]).map(x=>x.pool_id))];
+ const emptyId='00000000-0000-0000-0000-000000000000';
+ const [a,b,c,d,e]=await Promise.all([
+ ctx.db.from('logistics_pools').select('id,name').eq('tenant_id',ctx.tenantId).eq('active',true).in('id',poolIds.length?poolIds:[emptyId]),
  ctx.db.from('vehicles').select('id,name,plate,capacity_stops').eq('tenant_id',ctx.tenantId).eq('active',true),
  ctx.db.from('drivers').select('id,full_name').eq('tenant_id',ctx.tenantId).eq('active',true),
- ctx.db.from('manifests').select('id,pool_id,tenant_id,vehicle_id,driver_id,route_date,status,created_at,logistics_policy,cancelled_at,cancellation_reason,cancelled_stop_count,manifest_stops(id)').eq('tenant_id',ctx.tenantId).order('route_date',{ascending:false}).limit(100),
+ ctx.db.from('manifests').select('id,pool_id,tenant_id,vehicle_id,driver_id,route_date,status,created_at,logistics_policy,cancelled_at,cancellation_reason,cancelled_stop_count,manifest_stops(id)').eq('tenant_id',ctx.tenantId).in('pool_id',poolIds.length?poolIds:[emptyId]).order('route_date',{ascending:false}).limit(100),
  ctx.db.rpc('sgi_get_logistics_policy',{p_tenant:ctx.tenantId})
- ]).then(([a,b,c,d,e])=>{if(!live)return;setPools(a.data??[]);setVehicles(b.data??[]);setDrivers(c.data??[]);setManifests((d.data??[]) as Manifest[]);setPolicy(e.error?null:e.data);setPool(p=>a.data?.some(x=>x.id===p)?p:a.data?.[0]?.id??'');const err=a.error||b.error||c.error||d.error||e.error;if(err)setError(err.message);});return()=>{live=false}},[ctx.tenantId,ctx.companyId,version]);
+ ]);if(!live)return;setPools(a.data??[]);setVehicles(b.data??[]);setDrivers(c.data??[]);setManifests((d.data??[]) as Manifest[]);setPolicy(e.error?null:e.data);setPool(p=>a.data?.some(x=>x.id===p)?p:a.data?.[0]?.id??'');const err=a.error||b.error||c.error||d.error||e.error;if(err)setError(err.message);};void load().catch(()=>{if(live)setError('Não foi possível carregar os romaneios da empresa.');});return()=>{live=false}},[ctx.tenantId,ctx.companyId,version]);
  useEffect(()=>{let live=true;setDetails(null);setCandidates([]);setChosen([]);if(!selected)return;setLoading(true);void Promise.all([
  ctx.db.rpc('sgi_manifest_read_details',{p_manifest:selected.id}),
  selected.status==='draft'&&ctx.canShipping?ctx.db.rpc('sgi_manifest_candidates',{p_manifest:selected.id,p_company:ctx.companyId}):Promise.resolve({data:[],error:null})
