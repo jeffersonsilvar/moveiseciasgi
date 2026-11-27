@@ -19,3 +19,6 @@
 .smart-history p{margin:4px 0;overflow-wrap:anywhere}
 .smart-agenda .table-scroll td small{white-space:normal;max-width:340px;overflow-wrap:anywhere}
 @media(max-width:760px){.smart-calendar{gap:3px}.smart-day{padding:5px;min-height:76px}.smart-day strong{font-size:17px}.smart-day small,.smart-day span{font-size:9px}.smart-cap{display:none}.smart-option{grid-template-columns:1fr 1fr}.smart-option>div:first-child{grid-column:1/-1}.smart-agenda-filters input{width:100%;flex-basis:100%}}
+
+.smart-agenda-filters>input,.smart-agenda-filters>select{min-height:40px;padding:9px 12px;border:1px solid var(--border,#dce3df);border-radius:9px;background:var(--surface,#fff);color:inherit;font:inherit;font-size:13px;max-width:100%;}
+.smart-agenda-filters>input:focus,.smart-agenda-filters>select:focus{outline:2px solid #17664c;outline-offset:1px;}
