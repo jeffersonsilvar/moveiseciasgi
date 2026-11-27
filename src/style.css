@@ -107,3 +107,21 @@
 @media(max-width:1250px){.settings-pair{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:1050px){.settings-workspace{grid-template-columns:minmax(0,1fr)}.settings-navigation{position:static}.settings-navigation nav{grid-template-columns:repeat(3,minmax(0,1fr))}.settings-nav-foot{display:none}.settings-nav-heading small{display:inline;margin-left:12px}.settings-nav-chevron{display:none}.settings-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.settings-navigation nav{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav-item{padding:9px 6px;gap:7px}.settings-nav-label small{display:none}.settings-nav-icon{width:29px;height:29px}.settings-nav-label strong{font-size:11px}.settings-pair,.settings-user-form{grid-template-columns:minmax(0,1fr)}.settings-section-head{padding:15px}.settings-section-head h2{font-size:17px}.settings-section-icon{width:40px;height:40px}.settings-form-action .btn{width:100%}}
+
+/* Readability baseline for daily operational use. Keep the palette, improve contrast. */
+:root{--muted:#52645a;--ink:#202b25;--line:#cbd6ce}
+.page-head p,.panel-head p,.tiny-muted,.muted-line,.field small,.order-step-head p,.modal-head p,.selected-customer p,.pager,.empty p,.metric small,.metric>span,.metrics-strip span,.attention-list small,.chart-labels{color:#52645a;font-size:13px;line-height:1.5}
+.field>span{color:#344b3e;font-size:13px;font-weight:700}
+.field input,.field select,.field textarea,.modal-body textarea,.panel textarea,.search-box input,.filter-select,.inline-select select,.smart-agenda-filters>input,.smart-agenda-filters>select{font-size:14px;color:#202b25;border-color:#b9c9bf;line-height:1.45}
+.search-box input,.search-box.large input{font-size:14px}
+input::placeholder,textarea::placeholder{color:#5d6d63;opacity:1}
+.field input:disabled,.field select:disabled{color:#52645a;background:#edf1ee}
+table{font-size:14px}th{font-size:11px;color:#45584c}td{color:#34473b;line-height:1.45}td small{font-size:12px;color:#52645a}
+.panel-head h2,.order-step-head h2{font-size:17px}
+.btn{font-size:13px}.btn.small{font-size:12px;min-height:36px}
+.status{font-size:12px}.status.good{color:#176342}.status.warning{color:#79520b}.status.danger{color:#9b3628}.status.neutral{color:#435b4e}
+.subtle-warning,.subtle-info,.checkbox-bar{font-size:13px}.subtle-warning{color:#79520b}.subtle-info{color:#365e49}.checkbox-bar{color:#405a49}
+.smart-day span,.smart-day small,.smart-option small{font-size:12px;opacity:1;color:#52645a}
+.nav-item{font-size:13px;color:#c5d1c9}.nav-group-title{font-size:10px;color:#a7baae}
+.crumb,.secure-mini{color:#52645a}.header-company select{font-size:13px}
+@media(max-width:760px){.smart-day span,.smart-day small{font-size:10px}.panel-head h2,.order-step-head h2{font-size:16px}.field input,.field select,.field textarea{font-size:16px}.metrics-strip{grid-template-columns:1fr;gap:12px}.metrics-strip div{border-right:0}}
