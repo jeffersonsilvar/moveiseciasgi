@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {BarChart3,CalendarDays,Download} from 'lucide-react';
 import type {AppContext} from '../lib/types';
-import {money} from '../lib/utils';
+import {money,titleCaseBR} from '../lib/utils';
 import {Empty,PageHead,Panel} from '../components/UI';
 type SellerRow={seller_id:string;seller_name:string;order_count:number;products_gross:number;products_discount:number;products_net:number;legacy_date_count:number};
 const monthNow=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Recife',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7);
@@ -32,7 +32,7 @@ export function SellerReport({ctx}:{ctx:AppContext}){
  {totals.legacy>0&&<div className="subtle-warning">{totals.legacy} pedido(s) anteriores à implantação da data de confirmação usam a data de criação como aproximação. Validar na homologação do primeiro fechamento.</div>}
  {error&&<div className="subtle-warning">{error}</div>}
  <Panel title={`Base comercial · ${labelMonth(month)}`} sub="Vendedores só visualizam suas próprias vendas; gestores visualizam apenas unidades autorizadas. Comissões percentuais e fechamento auditado serão configurados separadamente.">
-  <div className="table-scroll"><table><thead><tr><th>Vendedor</th><th>Pedidos</th><th>Bruto de produtos</th><th>Descontos</th><th>Base de comissão</th></tr></thead><tbody>{rows.map(r=><tr key={r.seller_id}><td><div className="table-ident"><div className="table-avatar"><BarChart3 size={16}/></div><strong>{r.seller_name}</strong></div></td><td>{r.order_count}</td><td>{money(r.products_gross)}</td><td>{money(r.products_discount)}</td><td><strong className="green-text">{money(r.products_net)}</strong></td></tr>)}</tbody></table></div>
+  <div className="table-scroll"><table><thead><tr><th>Vendedor</th><th>Pedidos</th><th>Bruto de produtos</th><th>Descontos</th><th>Base de comissão</th></tr></thead><tbody>{rows.map(r=><tr key={r.seller_id}><td><div className="table-ident"><div className="table-avatar"><BarChart3 size={16}/></div><strong>{titleCaseBR(r.seller_name)}</strong></div></td><td>{r.order_count}</td><td>{money(r.products_gross)}</td><td>{money(r.products_discount)}</td><td><strong className="green-text">{money(r.products_net)}</strong></td></tr>)}</tbody></table></div>
   {!busy&&!rows.length&&<Empty title="Nenhuma venda na competência escolhida" description="O próximo mês começa zerado automaticamente, preservando o histórico dos meses anteriores."/>}
  </Panel></>;
 }
