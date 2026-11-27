@@ -70,3 +70,7 @@ export function sentenceCaseBR(value:string|null|undefined):string{
 export function normalizeProductSize(value:string|null|undefined):string{
  return String(value??'').trim().replace(/\s+/g,' ').replace(/(?<=\d)\s*[×xX]\s*(?=\d)/g,' x ').replace(/\b(CM|MM|M)\b/gi,unit=>unit.toLocaleLowerCase('pt-BR'));
 }
+
+/** Descrição logística: preserve as linhas e as unidades de medida. */
+export const productDescriptionBR=(value:string|null|undefined)=>String(value??'').split('\n').map(line=>titleCaseBR(line).replace(/(\d\s*)(CM|MM|M)\b/gi,(_,n,u)=>n+u.toLowerCase())).join('\n');
+export const logisticsPhone=(value:string|null|undefined)=>[10,11].includes(digits(value??'').length)?formatPhone(value):String(value??'');
