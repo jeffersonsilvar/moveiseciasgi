@@ -2,7 +2,7 @@ import './smart-agenda.css';
 import {useEffect,useState} from 'react';
 import {CalendarCheck,CalendarPlus,MapPin,Route,RefreshCw} from 'lucide-react';
 import type {AppContext} from '../lib/types';
-import {dateBR,digits,today} from '../lib/utils';
+import {dateBR,digits,today,titleCaseBR} from '../lib/utils';
 import {Field,Panel,ErrorBox} from './UI';
 
 export type ManualDelivery={reference:string;customer:string;seller:string;seller_id?:string;products:string;city:string;neighborhood:string;cep:string;street:string;number:string;phone:string;notes:string;released:boolean};
@@ -14,7 +14,7 @@ const addDays=(date:string,n:number)=>{const d=new Date(date+'T12:00:00Z');d.set
 export {addDays};
 
 export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void;previewOnly?:boolean}){
- const canOpen=!previewOnly&&scopedLogistics(ctx,target.company,target.branch);
+ const canOpen=scopedLogistics(ctx,target.company,target.branch);
  const [pools,setPools]=useState<{id:string;name:string}[]>([]);
  const [options,setOptions]=useState<Suggestion[]>([]);
  const [chosen,setChosen]=useState<Suggestion|null>(null);
@@ -56,6 +56,7 @@ export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx
  const selectedDate=openNew?date:chosen?.delivery_date;
  const selectedPool=openNew?pool:chosen?.pool_id;
  const valid=!previewOnly&&!!selectedDate&&!!selectedPool&&confirmed&&(!openNew||(canOpen&&Number.isInteger(Number(capacity))&&Number(capacity)>=1&&Number(capacity)<=100))&&(!target.booking||reason.trim().length>=5);
+ const openWithoutBooking=async()=>{if(busy||loading||!canOpen||!openNew||!confirmed||!pool||!date||!Number.isInteger(Number(capacity))||Number(capacity)<1||Number(capacity)>100)return;setBusy(true);setError('');try{const {error}=await ctx.db.rpc('sgi_smart_open_day',{p_company:target.company,p_branch:target.branch,p_pool:pool,p_date:date,p_capacity:Number(capacity)});if(error){setError(error.message);return;}ctx.notify('Data aberta, sem reservar o pedido bloqueado.');setOpenNew(false);setRefresh(v=>v+1);}catch{setError('Resultado não confirmado. Recalcule a agenda antes de repetir.');}finally{setBusy(false)}};
  const save=async()=>{
   if(busy||loading||!valid)return;
   setBusy(true);setError('');
@@ -66,26 +67,28 @@ export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx
   }catch(e){setError(e instanceof Error?e.message:'Resultado não confirmado. Atualize a agenda antes de repetir.');}finally{setBusy(false);}
  };
  return <Panel title={target.booking?'Remarcar entrega':'Assistente de agendamento'} sub="A mesma inteligência para pedidos digitais e entregas avulsas." action={onClose&&<button type="button" className="btn secondary small" disabled={busy} onClick={onClose}>Fechar</button>}>
-  <div className="subtle-info"><MapPin size={18}/><div><strong>{target.manual&&('Talão '+target.manual.reference+' · '+target.manual.customer+' — ')}{target.neighborhood} · {target.city}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
+  <div className="subtle-info"><MapPin size={18}/><div><strong>{target.manual&&('Talão '+target.manual.reference+' · '+titleCaseBR(target.manual.customer)+' — ')}{titleCaseBR(target.neighborhood)} · {titleCaseBR(target.city)}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
   {previewOnly&&<div className="subtle-warning">Planejamento preliminar: o pedido ainda tem bloqueio de liberação. As datas são apenas referências e não podem ser prometidas ou reservadas.</div>}
   {error&&<ErrorBox text={error}/>}
   <div className="toolbar"><span className="tiny-muted">Datas abertas e vagas reais · próximos 45 dias</span><button type="button" className="btn secondary small" disabled={busy||loading} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={14}/> Recalcular</button></div>
   {loading?<p role="status">Calculando os melhores encaixes...</p>:<>
+   {options.length>0&&!options.some(s=>['same_neighborhood','nearby','moderate','same_region'].includes(s.signal))&&<div className="subtle-warning">Nenhuma rota próxima identificada. {canOpen?'Considere abrir uma nova data para este destino.':'Solicite uma nova data à expedição.'} Não é necessário encaixar em rota distante.</div>}
+   {canOpen&&<button type="button" disabled={busy} className={'btn '+(openNew?'primary':'secondary')} onClick={()=>{setOpenNew(v=>!v);setChosen(null);setConfirmed(false);}}><CalendarPlus size={17}/> {previewOnly?'Planejar nova data (sem reservar)':'Abrir nova data / rota'}</button>}
    <div className="smart-options">{options.map((s,i)=><button type="button" key={s.id} disabled={busy} className={'smart-option '+(!openNew&&chosen?.id===s.id?'chosen':'')} onClick={()=>{setOpenNew(false);setChosen(s);setConfirmed(false);}}>
     <div><strong>{dateBR(s.delivery_date)} · {s.pool_name}</strong><small>{signalNames[s.signal]??s.signal}{i===0&&['same_neighborhood','nearby','moderate','same_region'].includes(s.signal)?' · Melhor encaixe disponível':''}</small></div>
     <div><strong>{s.used}/{s.capacity}</strong><small>{s.capacity-s.used} vaga(s)</small></div>
     <div><strong>{s.nearest_km==null?'—':Number(s.nearest_km).toFixed(1).replace('.',',')+' km'}</strong><small>CEP mais próximo, linha reta</small></div>
    </button>)}</div>
    {!options.length&&<p className="tiny-muted">Nenhuma data inteligente aberta com vaga. {canOpen?'Aprove uma nova data abaixo.':'Solicite abertura de rota à expedição.'}</p>}
-   {canOpen&&<button type="button" disabled={busy} className={'btn '+(openNew?'primary':'secondary')} onClick={()=>{setOpenNew(v=>!v);setChosen(null);setConfirmed(false);}}><CalendarPlus size={17}/> Abrir nova data / rota</button>}
    {openNew&&<div className="form-grid cols3" style={{marginTop:14}}>
     <Field label="Central logística"><select value={pool} onChange={e=>{setPool(e.target.value);setConfirmed(false)}}>{pools.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
     <Field label="Nova data"><input type="date" value={date} min={today()} max={addDays(today(),180)} onChange={e=>{setDate(e.target.value);setConfirmed(false)}}/></Field>
     <Field label="Capacidade diária aprovada (paradas)"><input type="number" min={1} max={100} value={capacity} onChange={e=>{setCapacity(e.target.value);setConfirmed(false)}} placeholder="Informe a capacidade real"/></Field>
-    <div className="subtle-warning smart-wide">Confirme a disponibilidade da frota e dos motoristas. O limite é compartilhado por toda a central; se a data já existir, sua capacidade original permanece.</div>
+    <div className="subtle-warning smart-wide">Confirme a capacidade operacional da central. Veículo e motorista não são necessários no modo simplificado.</div>
    </div>}
    {target.booking&&<Field label="Motivo da remarcação"><textarea rows={2} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe por que a data foi alterada"/></Field>}
-   {!previewOnly&&(openNew||chosen)&&<label className="checkbox-bar"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Confirmo a data selecionada e a disponibilidade operacional; o cliente está ciente.</label>}
+   {((!previewOnly&&(openNew||chosen))||(previewOnly&&openNew))&&<label className="checkbox-bar"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> {previewOnly?'Confirmo a abertura da data para planejamento interno, sem compromisso com o cliente.':'Confirmo a data selecionada e a disponibilidade operacional; o cliente está ciente.'}</label>}
+   {previewOnly&&openNew&&<div className="panel-footer"><button type="button" className="btn primary" disabled={busy||!confirmed||!pool||!date||!Number.isInteger(Number(capacity))||Number(capacity)<1||Number(capacity)>100} onClick={()=>void openWithoutBooking()}><CalendarPlus size={17}/> Abrir data sem reservar pedido</button></div>}
    {!previewOnly&&<div className="panel-footer"><button type="button" className="btn primary" disabled={!valid||busy} onClick={()=>void save()}><CalendarCheck size={17}/> {busy?'Reservando...':target.booking?'Confirmar remarcação':'Confirmar agendamento'}</button></div>}
    <p className="tiny-muted">Sugestões não são reservas. O banco valida capacidade e liberação novamente no momento da confirmação. Distâncias não representam trajetos por ruas.</p>
   </>}
