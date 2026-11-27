@@ -13,7 +13,7 @@ export const scopedLogistics=(ctx:AppContext,company:string,branch:string)=>ctx.
 const addDays=(date:string,n:number)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 export {addDays};
 
-export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void;previewOnly?:boolean}){
+export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false,closeLabel='Fechar'}:{ctx:AppContext;target:SmartTarget;onSaved:(date:string)=>void;onClose?:()=>void;previewOnly?:boolean;closeLabel?:string}){
  const canOpen=scopedLogistics(ctx,target.company,target.branch);
  const [pools,setPools]=useState<{id:string;name:string}[]>([]);
  const [options,setOptions]=useState<Suggestion[]>([]);
@@ -66,7 +66,7 @@ export function SmartBooking({ctx,target,onSaved,onClose,previewOnly=false}:{ctx
    ctx.notify(target.booking?'Entrega remarcada com histórico.':'Entrega agendada com capacidade reservada.');onSaved(selectedDate!);
   }catch(e){setError(e instanceof Error?e.message:'Resultado não confirmado. Atualize a agenda antes de repetir.');}finally{setBusy(false);}
  };
- return <Panel title={target.booking?'Remarcar entrega':'Assistente de agendamento'} sub="A mesma inteligência para pedidos digitais e entregas avulsas." action={onClose&&<button type="button" className="btn secondary small" disabled={busy} onClick={onClose}>Fechar</button>}>
+ return <Panel title={target.booking?'Remarcar entrega':'Assistente de agendamento'} sub="A mesma inteligência para pedidos digitais e entregas avulsas." action={onClose&&<button type="button" className="btn secondary small" disabled={busy} onClick={onClose}>{closeLabel}</button>}>
   <div className="subtle-info"><MapPin size={18}/><div><strong>{target.manual&&('Talão '+target.manual.reference+' · '+titleCaseBR(target.manual.customer)+' — ')}{titleCaseBR(target.neighborhood)} · {titleCaseBR(target.city)}</strong><p>{geo||'Consultando disponibilidade e localização...'}</p></div></div>
   {previewOnly&&<div className="subtle-warning">Planejamento preliminar: o pedido ainda tem bloqueio de liberação. As datas são apenas referências e não podem ser prometidas ou reservadas.</div>}
   {error&&<ErrorBox text={error}/>}
