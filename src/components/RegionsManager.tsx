@@ -21,7 +21,7 @@ export function RegionsManager({ctx,onChange}:{ctx:AppContext;onChange:()=>void}
  useEffect(()=>{
   let live=true;
   void Promise.all([
-    ctx.db.from('delivery_regions').select('id,name,active,delivery_region_areas(id,city,neighborhood)').eq('tenant_id',ctx.tenantId).order('name'),
+    ctx.db.from('delivery_regions').select('id,name,active,delivery_region_areas(id,city,neighborhood)').eq('tenant_id',ctx.tenantId).eq('smart_system',false).order('name'),
     ctx.db.rpc('sgi_discover_neighborhoods',{p_tenant:ctx.tenantId})
   ]).then(([zonesRes,discoverRes])=>{
    if(!live)return;
